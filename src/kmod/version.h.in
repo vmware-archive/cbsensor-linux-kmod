@@ -1,0 +1,17 @@
+/*
+ * Copyright 2020 VMware, Inc.
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ */
+
+#pragma once
+
+#define cbsensor_VERSION_MAJOR @cbsensor_VERSION_MAJOR@
+#define cbsensor_VERSION_MINOR @cbsensor_VERSION_MINOR@
+#define cbsensor_VERSION_PATCH @cbsensor_VERSION_PATCH@
+#define cbsensor_VERSION_TWEAK @cbsensor_VERSION_TWEAK@
+
+#define PRINT_VERSION_INFO                                                    \
+	PRINTK(KERN_INFO, "CBSENSOR.KO version %s (%s)", "@PROJECT_VERSION@", \
+	       "@TODAY@")
+
+MODULE_VERSION("@PROJECT_VERSION@");

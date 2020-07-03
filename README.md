@@ -1,30 +1,34 @@
+#CBR-Linux-Kernel
 
+##Build from a Docker container
 
-# cbsensor-linux-kmod
+Start the Docker container
+```bash
+docker run -it --rm -v$PWD:/home/conan/project artifactory-pub.bit9.local:5000/cbr/cbr-linux-builder-kernel
+```
+From within the container:
+```bash
+cd /home/conan/project
+mkdir build
+cd build
+conan install .. -j kernel-headers.json
+cmake -DKERNELHEADERS_DIR=`jq -r .installed[0].packages[0].cpp_info.rootpath < kernel-headers.json`/kernel ../src/kmod
+make
+```
 
-## Overview
+The `-j kernel-headers.json` argument exports information about the Conan package to a `.json` file. We use that file in the `cmake` command to get the full path to the kernel headers.
 
-## Try it out
+The kernel module, `cbsensor.ko` will be in the `build` directory.
 
-### Prerequisites
+## Running Gitlab-CI locally
 
-* Prereq 1
-* Prereq 2
-* Prereq 3
+Install the `gitlab-runner` Docker container for your OS.
 
-### Build & Run
-
-1. Step 1
-2. Step 2
-3. Step 3
-
-## Documentation
-
-## Contributing
-
-The cbsensor-linux-kmod project team welcomes contributions from the community. Before you start working with cbsensor-linux-kmod, please
-read our [Developer Certificate of Origin](https://cla.vmware.com/dco). All contributions to this repository must be
-signed as described on that page. Your signature certifies that you wrote the patch or have the right to pass it on
-as an open-source patch. For more detailed information, refer to [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## License
+To test run a kernel build run hen run:
+```
+gitlab-runner exec docker build-<version>
+```
+Where <version> is the kernel you wish to build, for example
+```
+gitlab-runner exec docker build-3.10.0-1062.el7.x86_64
+```
