@@ -1,6 +1,12 @@
-#CBR-Linux-Kernel
+# cbsensor-linux-kmod
 
-##Build from a Docker container
+This project is a Linux kernel module used to detect and report security related events and take security related actions.
+
+It is used by the VMware Carbon Black Endpoint Detection and Response product.
+
+The distributions supported by this module are RedHat 6 and 7 and derivatives that use the same RedHat kernels (CentOS, Oracle Linux).
+
+## Build from a Docker container
 
 Start the Docker container
 ```bash
