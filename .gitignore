@@ -11,8 +11,9 @@ Module.symvers
 cbsensor.ko.unsigned
 cbsensor.mod.c
 modules.order
-src/Kbuild
-src/version.h
+src/kmod/Kbuild
+src/kmod/version.h
 .idea
 build
 cmake-build-debug
+cmake-build-release

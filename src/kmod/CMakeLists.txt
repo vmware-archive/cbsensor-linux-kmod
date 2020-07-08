@@ -2,11 +2,8 @@ cmake_minimum_required(VERSION 3.6)
 
 project(cbsensor VERSION 7.0.0.1${cbsensor_VERSION_TWEAK} LANGUAGES C)
 
-set(CMAKE_C_FLAGS -O1 -Wall -Werror -Wformat -Wfatal-errors -Wswitch-default -Wno-unused-parameter -fexceptions -fstack-protector-all -Wformat -Wformat-security -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fno-omit-frame-pointer -fPIC -fvisibility=hidden)
-set(CMAKE_CXX_FLAGS -O1 -Wall -Werror -Wformat -Wfatal-errors -Wswitch-default -Wno-unused-parameter -fexceptions -fstack-protector-all -Wformat -Wformat-security -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fno-omit-frame-pointer -fPIC -fvisibility=hidden -Wno-noexcept-type -Wno-c++14-compat -std=c++0x -fvisibility-inlines-hidden)
-
-set(CMAKE_C_FLAGS_DEBUG -g -DDEBUG)
-set(CMAKE_CXX_FLAGS_DEBUG -g -DDEBUG)
+execute_process(COMMAND uname -r OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE KERNEL_VERSION)
+set(KERNELHEADERS_DIR /lib/modules/${KERNEL_VERSION}/build)
 
 string(TIMESTAMP TODAY "%Y-%m-%d %H:%M:%SZ")
 
@@ -52,8 +49,6 @@ CC=${CMAKE_C_COMPILER}")
 
 add_custom_command(OUTPUT ${DRIVER_FILE}
         COMMAND ${KBUILD_CMD} modules
-        #COMMAND ${SYMBOLS_INSTALL_COMMAND}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         DEPENDS
             cb-banning.c
             cb-isolation.c
