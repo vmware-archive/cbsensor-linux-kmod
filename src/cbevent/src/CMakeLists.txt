@@ -1,8 +1,5 @@
 set(CMAKE_CXX_STANDARD 14)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-
 add_library(${PROJECT_NAME} INTERFACE)
 target_sources(${PROJECT_NAME} INTERFACE
         CB_CMDLINE.h
