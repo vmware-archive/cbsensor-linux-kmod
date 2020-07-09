@@ -162,7 +162,7 @@ void CbIsolationInterceptByAddrProtoPort(
 		return;
 	}
 
-	// Our whitelist of addresses is IPv4, so just block IPv6 addresses
+	// Our allowed list of addresses is IPv4, so just block IPv6 addresses
 	// acquire shared resource
 	if (isIpV4) {
 		int i;

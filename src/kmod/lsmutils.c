@@ -28,33 +28,28 @@
 
 // Callback fn for kallsyms_on_each_symbol
 static int allsyms_find_symbol(void *data, const char *symstr,
-							   struct module *module, unsigned long address)
+			       struct module *module, unsigned long address)
 {
 	struct symbol_list *list = (struct symbol_list *)data;
-	struct symbols_s *curr_symbol;
+	struct symbols_s *  curr_symbol;
 
-	if (!list)
-	{
+	if (!list) {
 		return 0;
 	}
 
 	// Exit callback function sooner
-	if (list->count >= list->size)
-	{
+	if (list->count >= list->size) {
 		return 0;
 	}
 
-	for (curr_symbol = list->symbols;
-		 curr_symbol && curr_symbol->name; ++curr_symbol)
-	{
+	for (curr_symbol = list->symbols; curr_symbol && curr_symbol->name;
+	     ++curr_symbol) {
 		// Skip if found
-		if (*curr_symbol->addr)
-		{
+		if (*curr_symbol->addr) {
 			continue;
 		}
 
-		if (strcmp(symstr, curr_symbol->name) == 0)
-		{
+		if (strcmp(symstr, curr_symbol->name) == 0) {
 			list->count += 1;
 			*curr_symbol->addr = address;
 			break;
@@ -66,10 +61,9 @@ static int allsyms_find_symbol(void *data, const char *symstr,
 //
 // Primarily used to find private symbols
 //
-void lookup_symbols(struct symbol_list* sym_list)
+void lookup_symbols(struct symbol_list *sym_list)
 {
-	if (sym_list)
-	{
+	if (sym_list) {
 		// Clear out global struct containing static mappings of
 		// symbols to resolved addresses.
 		memset(&g_resolvedSymbols, 0, sizeof(g_resolvedSymbols));

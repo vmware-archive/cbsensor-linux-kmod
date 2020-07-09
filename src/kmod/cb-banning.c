@@ -18,7 +18,7 @@ struct BL_TBL_KEY {
 	uint64_t inode;
 };
 
-struct BlacklistEntry {
+struct DenylistEntry {
 	struct HashTableNode link;
 	struct BL_TBL_KEY    key;
 	uint64_t	     hash;
@@ -40,10 +40,10 @@ bool cbBanningInitialize(void)
 	g_protectionModeEnabled		= PROTECTION_ENABLED;
 	g_banned_process_by_inode_count = 0;
 	g_banning_table			= hashtbl_init_generic(
-		8192, sizeof(struct BlacklistEntry), CB_BANNING_CACHE_OBJ_SZ,
+		8192, sizeof(struct DenylistEntry), CB_BANNING_CACHE_OBJ_SZ,
 		"cb_banning_cache", sizeof(struct BL_TBL_KEY),
-		offsetof(struct BlacklistEntry, key),
-		offsetof(struct BlacklistEntry, link));
+		offsetof(struct DenylistEntry, key),
+		offsetof(struct DenylistEntry, link));
 
 	if (!g_banning_table) {
 		PRINTK(KERN_ERR, "Failed to initialize banning hash table");
@@ -75,15 +75,15 @@ void cbSetProtectionState(uint32_t new_state)
 
 bool cbSetBannedProcessInode(uint64_t ino)
 {
-	struct BlacklistEntry *bep;
-	bool		       retval = true;
-	int64_t		       i =
+	struct DenylistEntry *bep;
+	bool		      retval = true;
+	int64_t		      i =
 		atomic64_read((atomic64_t *)&g_banned_process_by_inode_count);
 
 	PR_DEBUG("Received ino=%llu inode count=%lld", ino, i);
 
-	bep = (struct BlacklistEntry *)hashtbl_alloc_generic(g_banning_table,
-							     GFP_KERNEL);
+	bep = (struct DenylistEntry *)hashtbl_alloc_generic(g_banning_table,
+							    GFP_KERNEL);
 	if (bep == NULL) {
 		retval = false;
 		goto sbpi_exit;
@@ -112,14 +112,14 @@ inline bool cbClearBannedProcessInode(uint64_t ino)
 {
 	int64_t count =
 		atomic64_read((atomic64_t *)&g_banned_process_by_inode_count);
-	struct BlacklistEntry *bep;
-	struct BL_TBL_KEY      key = { ino };
+	struct DenylistEntry *bep;
+	struct BL_TBL_KEY     key = { ino };
 
 	if (count == 0 || ino == 0) {
 		return false;
 	}
 
-	bep = (struct BlacklistEntry *)hashtbl_del_by_key_generic(
+	bep = (struct DenylistEntry *)hashtbl_del_by_key_generic(
 		g_banning_table, &key);
 	if (!bep) {
 		return false;
@@ -147,9 +147,9 @@ void cbClearAllBans(void)
 
 bool cbKillBannedProcessByInode(uint64_t ino)
 {
-	int64_t		       count;
-	struct BlacklistEntry *bep;
-	struct BL_TBL_KEY      key = { ino };
+	int64_t		      count;
+	struct DenylistEntry *bep;
+	struct BL_TBL_KEY     key = { ino };
 
 	if (atomic_read((atomic_t *)&g_protectionModeEnabled) ==
 	    PROTECTION_DISABLED) {
@@ -163,8 +163,8 @@ bool cbKillBannedProcessByInode(uint64_t ino)
 		goto kbpbi_exit;
 	}
 
-	bep = (struct BlacklistEntry *)hashtbl_get_generic(g_banning_table,
-							   &key);
+	bep = (struct DenylistEntry *)hashtbl_get_generic(g_banning_table,
+							  &key);
 	if (!bep) {
 		PR_DEBUG("kill banned process failed to find ino=%llu", ino);
 		goto kbpbi_exit;

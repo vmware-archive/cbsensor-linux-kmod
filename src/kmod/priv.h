@@ -386,11 +386,11 @@ struct symbols_s {
 	unsigned long *addr;
 };
 struct symbol_list {
-    struct symbols_s *symbols;
-    unsigned long size;
-    unsigned long count;
+	struct symbols_s *symbols;
+	unsigned long	  size;
+	unsigned long	  count;
 };
-extern void lookup_symbols(struct symbol_list* sym_list);
+extern void lookup_symbols(struct symbol_list *sym_list);
 extern void printAddress(char *msg, const char *fn, const struct sock *sk,
 			 const struct sockaddr *localAddr,
 			 const struct sockaddr *remoteAddr);
