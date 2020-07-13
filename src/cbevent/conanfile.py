@@ -2,7 +2,7 @@ from conans import ConanFile, CMake
 
 class cbeventConan(ConanFile):
     name = "cbevent"
-    version = "0.5"
+    version = "0.6"
     license = "BSD-2-Clause"
     url = "https://gitlab.bit9.local/dheater/cbevent"
     description = "CB Event structure shared between CBR linux event generators and the daemon"

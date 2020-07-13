@@ -28,11 +28,9 @@ enum ProcessBlockType {
 ///   These enums help inform the server as to why
 enum TerminateFailureReason {
 	TerminateFailureReasonNone = 0, ///< Process was successfully terminated
-	ProcessWhiteListed, ///< We determined that the process was whitelisted
-			    ///< (failure details will have the WhiteListReason)
-	ProcessOpenFailure, ///< We failed to open a handle to the process
-			    ///< (failure details will contain NT_STATUS error
-			    ///< code)
+	ProcessOpenFailure = 2, ///< We failed to open a handle to the process
+				///< (failure details will contain NT_STATUS
+				///< error code)
 	ProcessTerminateFailure, ///< ZwTerminateProcess failed (failure details
 				 ///< will contain NT_STATUS error code)
 };

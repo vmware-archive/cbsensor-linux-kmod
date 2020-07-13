@@ -49,11 +49,11 @@ static int __init cbsensor_init(void)
 #define CB_RESOLV_FUNCTION(F_TYPE, F_NAME, ARGS_DECL) \
 	CB_RESOLV_VARIABLE(F_TYPE, F_NAME)
 
-	struct symbols_s symbols[] = { CB_RESOLV_SYMBOLS{ NULL, 0, NULL } };
-	struct symbol_list sym_list = {
-		.symbols = symbols,
-		.size = ARRAY_SIZE(symbols) - 1, // Prevent extra iterations
-		.count = 0,
+	struct symbols_s   symbols[] = { CB_RESOLV_SYMBOLS{ NULL, 0, NULL } };
+	struct symbol_list sym_list  = {
+		 .symbols = symbols,
+		 .size	  = ARRAY_SIZE(symbols) - 1, // Prevent extra iterations
+		 .count	  = 0,
 	};
 
 	PRINT_VERSION_INFO;
