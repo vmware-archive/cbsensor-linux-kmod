@@ -2,6 +2,6 @@ language: C
 sudo: true
 
 before_install:
-    - apt install -y clang-format
+    - sudo apt install -y clang-format
 script:
  - if [ diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch]) ]
