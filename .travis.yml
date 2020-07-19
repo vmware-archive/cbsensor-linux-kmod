@@ -5,4 +5,4 @@ before_install:
     - sudo apt update
     - sudo apt install -y clang-format
 script:
- - if [ diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch]) ]
+ - diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch])
