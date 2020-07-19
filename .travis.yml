@@ -3,6 +3,7 @@ sudo: true
 dist: bionic
 
 before_install:
+    - sudp apt remove -y clang-format
     - sudo apt install -y clang-format-9
     - sudo ln -s /usr/bin/clang-format-9 /usr/bin/clang-format
 
