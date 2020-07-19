@@ -2,8 +2,7 @@ language: C
 sudo: true
 
 before_install:
-    - sudo apt update
-    - sudo apt install -y clang-format-9
-    - sudo ln -s /usr/bin/clang-format-9 /usr/bin/clang-format
+    - pip3 install clang-format
 script:
- - diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch])
+    - clang-format --version
+    - diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch])
