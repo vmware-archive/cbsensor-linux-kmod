@@ -2,7 +2,7 @@ language: C
 sudo: true
 
 before_install:
-    - pip3 install clang-format
+    - pip install clang-format
 script:
     - clang-format --version
     - diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch])
