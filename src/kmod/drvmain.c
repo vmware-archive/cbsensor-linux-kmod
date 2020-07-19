@@ -18,7 +18,7 @@
 #define HOOK_MASK 0xFFFFFFFF
 #endif
 
-uint32_t  g_debug_subsystem	= 0;
+uint32_t g_debug_subsystem	= 0;
 uint32_t g_eventFilter		= CB_EVENT_FILTER_ALL;
 uint32_t g_pid_gc_freq		= 30;
 uint32_t g_enableHooks		= HOOK_MASK;
