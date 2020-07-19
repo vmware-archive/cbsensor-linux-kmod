@@ -3,6 +3,7 @@ sudo: true
 
 before_install:
     - sudo apt update
-    - sudo apt install -y clang-format
+    - sudo apt install -y clang-format-10
+    - sudo ln -s /usr/bin/clang-format-10 /usr/bin/clang-format
 script:
  - diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch])
