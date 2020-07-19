@@ -9,7 +9,7 @@ enum CB_DRIVER_REQUEST {
 	CB_DRIVER_REQUEST_GET_VERSION  = 1, // not used?
 	CB_DRIVER_REQUEST_APPLY_FILTER = 2, // one way, called by WEB and
 					    // driver-manger;
-	CB_DRIVER_REQUEST_IGNORE_UID	   = 3, // one way
+    	CB_DRIVER_REQUEST_IGNORE_UID	   = 3, // one way
 	CB_DRIVER_REQUEST_IGNORE_PID	   = 4, // one way
 	CB_DRIVER_REQUEST_IGNORE_SERVER	   = 5, // one way
 	CB_DRIVER_REQUEST_SET_BANNED_PID   = 6, // not use?

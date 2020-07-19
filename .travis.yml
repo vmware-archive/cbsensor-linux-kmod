@@ -7,3 +7,4 @@ before_install:
 
 script:
     - diff -u <(cat src/kmod/*.[ch]) <(clang-format-9 src/kmod/*.[ch])
+    - diff -u <(cat src/cbevent/src/*.h) <(clang-format-9 src/cbevent/src/*.h)
