@@ -1,5 +1,5 @@
 language: C
-sudo: false
+sudo: true
 
 before_install:
     - apt install -y clang-format
