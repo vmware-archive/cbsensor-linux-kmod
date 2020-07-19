@@ -1,0 +1,5 @@
+language: C
+sudo: false
+
+script:
+ - if [ diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch]) ]
