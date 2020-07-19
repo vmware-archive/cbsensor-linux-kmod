@@ -1,8 +1,9 @@
 language: C
 sudo: true
+dist: bionic
 
 before_install:
-    - pip install clang-format
+    - sudo pip install clang-format
 script:
     - clang-format --version
     - diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch])
