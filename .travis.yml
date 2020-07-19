@@ -3,7 +3,8 @@ sudo: true
 dist: bionic
 
 before_install:
-    - sudo pip install clang-format
+    - sudo apt install -y clang-format
+
 script:
     - clang-format --version
     - diff -u <(cat src/kmod/*.[ch]) <(clang-format src/kmod/*.[ch])
