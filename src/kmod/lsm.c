@@ -16,7 +16,8 @@ static struct security_operations g_combined_ops; // Original LSM plus our hooks
 extern int  cb_bprm_check_security(struct linux_binprm *bprm);
 extern void cb_bprm_committed_creds(struct linux_binprm *bprm);
 
-extern int task_wait(struct task_struct *p);
+extern int  task_wait(struct task_struct *p);
+extern void cb_task_free(struct task_struct *p);
 
 extern uint32_t g_enableHooks;
 
@@ -72,8 +73,13 @@ bool lsm_initialize(uint32_t enableHooks)
 	if (enableHooks & CB__LSM_bprm_committed_creds)
 		g_combined_ops.bprm_committed_creds =
 			cb_bprm_committed_creds; // process launched (exec)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+	if (enableHooks & CB__LSM_task_wait)
+		g_combined_ops.task_free = cb_task_free; // process died
+#else
 	if (enableHooks & CB__LSM_task_wait)
 		g_combined_ops.task_wait = task_wait; // process died
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 	if (enableHooks & CB__LSM_mmap_file)
 		g_combined_ops.mmap_file = on_file_mmap; // shared library load
@@ -137,7 +143,11 @@ bool lsm_hooks_changed(uint32_t enableHooks)
 		changed |= secops->bprm_committed_creds !=
 			   cb_bprm_committed_creds;
 	if (enableHooks & CB__LSM_task_wait)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+		changed |= secops->task_free != cb_task_free;
+#else
 		changed |= secops->task_wait != task_wait;
+#endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 	if (enableHooks & CB__LSM_mmap_file)
 		changed |= secops->mmap_file != on_file_mmap;
