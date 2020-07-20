@@ -151,12 +151,59 @@ uint64_t get_ino_from_task(struct task_struct *task)
 //
 // Process exit hook
 //
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+void cb_task_free(struct task_struct *p)
+{
+	struct CB_EVENT *event;
+	int		 ret;
+
+	MODULE_GET();
+	if (!p) {
+		PR_DEBUG("cb_task_free null task_struct");
+		goto task_free_exit;
+	}
+
+	// With our current fork event hook (see function _cb_post_clone), the
+	// process tracking table sometimes saves additional records at the
+	// thread level, so the clean up here should also based on the thread
+	// id.
+	if (!p->pid) {
+		PR_DEBUG("cb_task_free pid is 0");
+		goto task_free_exit;
+	}
+
+	if (cbIngoreProcess(p->pid)) {
+		goto task_free_exit;
+	}
+
+	ret = process_tracking_remove_process(p->pid);
+	if (ret) {
+		PR_DEBUG("passed: process_tracking_remove_process: pid %d\n",
+			 p->pid);
+	} else {
+		PR_DEBUG("failed: process_tracking_remove_process: pid %d\n",
+			 p->pid);
+		goto task_free_exit;
+	}
+
+	event = logger_alloc_event_notask(CB_EVENT_TYPE_PROCESS_EXIT, p->pid,
+					  GFP_ATOMIC);
+	if (event) {
+		logger_submit_event(event);
+	}
+
+task_free_exit:
+	g_original_ops_ptr->task_free(p);
+	MODULE_PUT();
+}
+#else
 int task_wait(struct task_struct *p)
 {
 	struct CB_EVENT *event;
-	pid_t		 pid = getpid(p);
-	int		 ret;
-	bool		 removed_process;
+	pid_t pid = getpid(p);
+	int ret;
+	bool removed_process;
 
 	MODULE_GET();
 
@@ -190,6 +237,7 @@ task_wait_exit:
 	MODULE_PUT();
 	return ret;
 }
+#endif
 
 // This does nothing but is required by the hook
 long _cb_pre_clone(long id, long flags)

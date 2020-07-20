@@ -18,9 +18,13 @@
 #define HOOK_MASK 0xFFFFFFFF
 #endif
 
-uint32_t g_debug_subsystem	= 0;
-uint32_t g_eventFilter		= CB_EVENT_FILTER_ALL;
-uint32_t g_pid_gc_freq		= 30;
+uint32_t g_debug_subsystem = 0;
+uint32_t g_eventFilter	   = CB_EVENT_FILTER_ALL;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+uint32_t g_pid_gc_freq = 0;
+#else
+uint32_t g_pid_gc_freq = 30;
+#endif
 uint32_t g_enableHooks		= HOOK_MASK;
 uid_t	 g_cb_server_uid	= (uid_t)-1;
 int64_t	 g_cb_ignored_pid_count = 0;
