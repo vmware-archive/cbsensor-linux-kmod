@@ -1,7 +1,12 @@
+project(cbevent-event-parser)
 set(CMAKE_CXX_STANDARD 14)
 
-add_library(${PROJECT_NAME} INTERFACE)
-target_sources(${PROJECT_NAME} INTERFACE
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+add_executable(${PROJECT_NAME}
+        parser.cpp
+        CB_EVENT_JSON.cpp
         CB_CMDLINE.h
         CB_DRIVER_REQUEST.h
         CB_EVENT_BLOCK_RESPONSE.h
@@ -24,4 +29,7 @@ target_sources(${PROJECT_NAME} INTERFACE
         CB_TRUSTED_PATH.h
         )
 
-target_include_directories(${PROJECT_NAME} INTERFACE .)
+target_include_directories(${PROJECT_NAME} INTERFACE
+        ${CONAN_INCLUDE_DIRS}
+        ${PROJECT_SOURCE_DIR}
+        )
