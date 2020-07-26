@@ -13,17 +13,14 @@ using json = nlohmann::json;
 
 static void convert_cbevent_input_to_json(std::istream &in)
 {
-	json j;
-
 	CB_EVENT event = {};
-
 	for (unsigned int i = 0;
 	     in.read(reinterpret_cast<char *>(&event), sizeof(event)); ++i) {
-		j[i] = event;
+		json j = event;
+		// Dump the output in JSON format
+		std::cout << j.dump(2) << std::endl;
 	}
 
-	// Dump the output in JSON format
-	std::cout << j.dump(2) << std::endl;
 }
 
 int main(int argc, char *argv[])
