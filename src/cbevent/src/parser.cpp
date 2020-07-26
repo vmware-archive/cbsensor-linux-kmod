@@ -11,20 +11,30 @@
 
 using json = nlohmann::json;
 
-int main(int argc, char *argv[])
+static void convert_cbevent_input_to_json(std::istream &in)
 {
 	json j;
 
-	std::ifstream input(argv[1], std::ios::in | std::ios::binary);
-	CB_EVENT      event = {};
+	CB_EVENT event = {};
+
 	for (unsigned int i = 0;
-	     input.read(reinterpret_cast<char *>(&event), sizeof(event)); ++i) {
+	     in.read(reinterpret_cast<char *>(&event), sizeof(event)); ++i) {
 		j[i] = event;
 	}
-	input.close();
 
 	// Dump the output in JSON format
 	std::cout << j.dump(2) << std::endl;
+}
+
+int main(int argc, char *argv[])
+{
+	if (argc > 1) {
+		std::ifstream input(argv[1], std::ios::in | std::ios::binary);
+		convert_cbevent_input_to_json(input);
+		input.close();
+	} else {
+		convert_cbevent_input_to_json(std::cin);
+	}
 
 	return 0;
 }
