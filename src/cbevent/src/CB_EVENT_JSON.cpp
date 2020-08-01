@@ -72,27 +72,27 @@ void to_json(json &j, const CB_EVENT &event)
 
 void to_json(json &j, const CB_EVENT_PROCESS_INFO &info)
 {
-	j["pid"]		= info.pid;
+	j["PID"]		= info.pid;
 	j["Windows start time"] = info.process_start_time;
 	j["Windows event time"] = info.event_time;
 }
 
 void to_json(json &j, const CB_EVENT_PROCESS_START &data)
 {
-	j["Parent pid"] = data.parent;
+	j["Parent PID"] = data.parent;
 	j["UID"]	= data.uid;
 	j["Start type"] = data.start_action; // 1 = FORK 2 = EXEC
 	j["Observed"]	= data.observed; // Flag to identify if the start was
 	// actually observed, or this fake
-	j["inode"]	  = data.inode; // If we have it otherwise 0
-	j["path"]	  = data.path;
+	j["INode"]	  = data.inode; // If we have it otherwise 0
+	j["Path"]	  = data.path;
 	j["Command line"] = data.cmdLine.v;
 	j["Path found"]	  = data.path_found;
 }
 
 void to_json(json &j, const CB_EVENT_PROCESS_EXIT &data)
 {
-	j["pid"] = data.pid;
+	j["PID"] = data.pid;
 }
 
 void to_json(json &j, const CB_EVENT_MODULE_LOAD &data)
@@ -104,7 +104,7 @@ void to_json(json &j, const CB_EVENT_MODULE_LOAD &data)
 NLOHMANN_JSON_SERIALIZE_ENUM(CB_FILE_TYPE,
 			     { { filetypeUnknown, "Unknown" },
 			       { filetypePe, "PE" },
-			       { filetypeElf, "Elf" },
+			       { filetypeElf, "ELF" },
 			       { filetypeUniversalBin, "Universal Bin" },
 			       { filetypeEicar, "EICAR" },
 			       { filetypeOfficeLegacy, "Office Legacy" },
@@ -161,7 +161,7 @@ void to_json(json &j, const CB_EVENT_BLOCK &data)
 	j["Process termination result"] = data.failureReason;
 	j["Result code"]		= data.failureReasonDetails;
 	j["UID"]			= data.uid;
-	j["inode"]	  = data.inode; // If we have it otherwise 0
+	j["INode"]	  = data.inode; // If we have it otherwise 0
 	j["Path"]	  = data.path;
 	j["Command line"] = data.cmdLine.v;
 	j["Path found"]	  = data.path_found;
