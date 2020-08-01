@@ -1,0 +1,10 @@
+language: C
+sudo: true
+dist: bionic
+
+before_install:
+    - sudo apt install -y clang-format-9
+
+script:
+    - diff -u <(cat src/kmod/*.[ch]) <(clang-format-9 src/kmod/*.[ch])
+    - diff -u <(cat src/cbevent/src/*.h) <(clang-format-9 src/cbevent/src/*.h)
