@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.14)
 
 project(cbsensor VERSION 7.0.0.1${cbsensor_VERSION_TWEAK} LANGUAGES C)
 
+if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup()
+    set(KERNELDIR CONAN_INCLUDE_DIRS_KERNEL-DEVEL)
+endif()
+
 if(NOT DEFINED KERNELDIR)
     execute_process(COMMAND uname -r OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE KERNEL_VERSION)
     set(KERNELDIR /lib/modules/${KERNEL_VERSION}/build)
