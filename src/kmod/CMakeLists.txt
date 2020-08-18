@@ -5,7 +5,7 @@ project(cbsensor VERSION 7.0.0.1${cbsensor_VERSION_TWEAK} LANGUAGES C)
 if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
-    set(KERNELDIR CONAN_INCLUDE_DIRS_KERNEL-DEVEL)
+    set(KERNELDIR CONAN_KERNEL-DEVEL_ROOT)
 endif()
 
 if(NOT DEFINED KERNELDIR)
