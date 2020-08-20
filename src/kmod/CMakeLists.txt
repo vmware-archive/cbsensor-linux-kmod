@@ -1,9 +1,17 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.14)
 
 project(cbsensor VERSION 7.0.0.1${cbsensor_VERSION_TWEAK} LANGUAGES C)
 
-execute_process(COMMAND uname -r OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE KERNEL_VERSION)
-set(KERNELHEADERS_DIR /lib/modules/${KERNEL_VERSION}/build)
+if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup()
+    set(KERNELDIR ${CONAN_KERNEL-DEVEL_ROOT}/kernel)
+endif()
+
+if(NOT DEFINED KERNELDIR)
+    execute_process(COMMAND uname -r OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE KERNEL_VERSION)
+    set(KERNELDIR /lib/modules/${KERNEL_VERSION}/build)
+endif()
 
 string(TIMESTAMP TODAY "%Y-%m-%d %H:%M:%SZ")
 
@@ -14,7 +22,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 set(DRIVER_FILE cbsensor.ko)
 
-set(KBUILD_CMD $(MAKE) --no-print-directory -C ${KERNELHEADERS_DIR} M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR} o=${CMAKE_CURRENT_BINARY_DIR} V=0)
+set(KBUILD_CMD $(MAKE) --no-print-directory -C ${KERNELDIR} M=${CMAKE_CURRENT_BINARY_DIR} src=${CMAKE_CURRENT_SOURCE_DIR} o=${CMAKE_CURRENT_BINARY_DIR} V=0)
 
 set(SYMBOLS_INSTALL_COMMAND objcopy --only-keep-debug ${DRIVER_FILE} ${DRIVER_FILE}.debug && ${CMAKE_STRIP} --strip-unneeded ${DRIVER_FILE})
 
