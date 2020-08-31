@@ -17,7 +17,7 @@ bool file_helper_init(void)
 char *dentry_to_path(struct dentry *dentry, char *buf)
 {
 	if (CB_RESOLVED(dentry_path) == NULL) {
-		PRINTK(KERN_ERR, "dentry_path is NULL.");
+		PRINTK(KERN_ERR, "Function pointer dentry_path is NULL.");
 		return NULL;
 	}
 	return CB_RESOLVED(dentry_path)(dentry, buf, PATH_MAX);
