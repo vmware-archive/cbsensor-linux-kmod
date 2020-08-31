@@ -332,9 +332,6 @@ extern int	     isSpecialFile(char *pathname, int len);
 #define TRY_CB_RESOLVED(S_NAME)                      \
 	TRY_MSG(CB_CHECK_RESOLVED(S_NAME), KERN_ERR, \
 		"Function pointer \"%s\" is NULL.", #S_NAME)
-#define CANCEL_CB_RESOLVED(S_NAME)                      \
-	CANCEL_MSG(CB_CHECK_RESOLVED(S_NAME), KERN_ERR, \
-		   "Function pointer \"%s\" is NULL.", #S_NAME)
 
 // Define a list of symbols using the CB_RESOLV_VARIABLE(V_TYPE, V_NAME) and
 // CB_RESOLV_FUNCTION(F_TYPE, F_NAME, ARGS_DECL) macros.

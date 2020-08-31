@@ -21,7 +21,6 @@ static bool _get_cmdline(struct task_struct *task, unsigned long start_addr,
 			 unsigned long end_addr, int args, char *cmdLine,
 			 size_t cmdLineSize)
 {
-	bool	     xcode	= false;
 	unsigned int cmdLinePos = 0;
 	int	     i;
 	size_t	     len = 0;
@@ -29,7 +28,10 @@ static bool _get_cmdline(struct task_struct *task, unsigned long start_addr,
 	if (!task) {
 		return false;
 	}
-	CANCEL_CB_RESOLVED(access_process_vm);
+	if (CB_RESOLVED(access_process_vm) == NULL) {
+		PRINTK(KERN_ERR, "Function pointer access_process_vm is NULL.");
+		return false;
+	}
 
 	// Verify the buffer exists
 	if (cmdLine == NULL) {
