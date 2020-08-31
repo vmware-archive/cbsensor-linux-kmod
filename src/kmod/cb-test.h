@@ -80,10 +80,3 @@
 			return xcode; \
 		}                     \
 	} while (0)
-
-#define CANCEL_VOID(x)          \
-	do {                    \
-		if (!(x)) {     \
-			return; \
-		}               \
-	} while (0)
