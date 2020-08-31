@@ -73,14 +73,6 @@
 		}                          \
 	} while (0)
 
-#define CANCEL_MSG(x, msg...)         \
-	do {                          \
-		if (!(x)) {           \
-			PRINTK(msg);  \
-			return xcode; \
-		}                     \
-	} while (0)
-
 #define CANCEL_VOID(x)          \
 	do {                    \
 		if (!(x)) {     \
