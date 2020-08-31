@@ -1,5 +1,5 @@
 [build_requires]
-kernel-devel/3.10.0-1062.el7.x86_64@cb/stable
+nlohmann_json/3.8.0
 
 [generators]
 cmake

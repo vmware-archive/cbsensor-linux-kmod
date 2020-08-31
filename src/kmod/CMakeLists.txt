@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(cbsensor VERSION 7.0.0.1${cbsensor_VERSION_TWEAK} LANGUAGES C)
+project(cbsensor VERSION 1.0.1.1${cbsensor_VERSION_TWEAK} LANGUAGES C)
 
 if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
-    set(KERNELDIR ${CONAN_KERNEL-DEVEL_ROOT}/kernel)
+    if(CONAN_KERNEL-DEVEL_ROOT)
+        set(KERNELDIR ${CONAN_KERNEL-DEVEL_ROOT}/kernel)
+    endif()
 endif()
 
 if(NOT DEFINED KERNELDIR)
