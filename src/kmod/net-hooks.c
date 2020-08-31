@@ -619,7 +619,7 @@ static bool cb_getudppeername(struct sock *sk, union CB_SOCK_ADDR *remoteAddr,
 static void cb_getpeername(struct sock *sk, union CB_SOCK_ADDR *remoteAddr,
 			   struct msghdr *msg)
 {
-	if(!sk || !remoteAddr || !msg) {
+	if (!sk || !remoteAddr || !msg) {
 		return;
 	}
 
@@ -651,7 +651,7 @@ static void cb_getsockname(struct sock *sk, union CB_SOCK_ADDR *localAddr,
 {
 	struct inet_sock *inet;
 
-	if(!sk || !localAddr || !msg) {
+	if (!sk || !localAddr || !msg) {
 		return;
 	}
 
