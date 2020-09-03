@@ -7,9 +7,88 @@
 #include "hash-table-generic.h"
 #include "priv.h"
 
-#define get_datap(hashTblp, ptr) ((void *)((ptr) - (hashTblp)->node_offset))
-#define get_nodep(hashTblp, ptr) \
-	((struct HashTableNode *)((ptr) + (hashTblp)->node_offset))
+static inline void *get_datap(const struct HashTbl *hashTblp,
+			      const struct HashTableNode *node)
+{
+	return (void *)(node - hashTblp->node_offset);
+}
+
+static inline struct HashTableNode *get_nodep(const struct HashTbl *hashTblp,
+					      const void *data)
+{
+	return (struct HashTableNode *)(data + hashTblp->node_offset);
+}
+
+static inline void *get_key_ptr(struct HashTbl *hashTblp, void *datap)
+{
+	return (void *)datap + hashTblp->key_offset;
+}
+
+static inline unsigned long lock_bucket(struct hashtbl_bkt *bkt)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&bkt->lock, flags);
+	return flags;
+}
+
+static inline void unlock_bucket(struct hashtbl_bkt *bkt,
+				 unsigned long flags)
+{
+	spin_unlock_irqrestore(&bkt->lock, flags);
+}
+
+// TODO - Optimize 32bit aligned keys to use jhash2 when >= 16 bytes
+static inline u32 hashtbl_hash_key(const struct HashTbl *hashTblp, unsigned char *key)
+{
+	return jhash(key, hashTblp->key_len, hashTblp->secret);
+}
+static inline int hashtbl_bkt_index(const struct HashTbl *hashTblp, u32 hash)
+{
+	return hash & (hashTblp->numberOfBuckets - 1);
+}
+
+// Assumed to be locked
+// If the key wasn't contained within the object itself
+// we could more easily decouple from HashTbl struct.
+static struct HashTableNode *__lookup_entry_safe(struct HashTbl *hashTblp,
+						 struct hlist_head *head, u32 hash,
+						 const void *key)
+{
+	struct HashTableNode *node;
+	struct hlist_node *tmp;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+	struct hlist_node *_node;
+	hlist_for_each_entry_safe(node, _node, tmp, head, link) {
+#else
+	hlist_for_each_entry_safe(node, tmp, head, link) {
+#endif
+		if (hash == node->hash &&
+			hashTblp->cmp_key(key,
+					  get_key_ptr(hashTblp, get_datap(hashTblp, node)),
+					  hashTblp->cmp_len)) {
+			return node;
+		}
+	}
+	return NULL;
+}
+
+static bool cmp_key_u8(const void *a, const void *b, int key_len)
+{
+	return memcmp(a, b, key_len) == 0;
+}
+static bool cmp_key_u32(const void *a, const void *b, int indices)
+{
+	int i;
+	const uint32_t *a32 = (const uint32_t *)a;
+	const uint32_t *b32 = (const uint32_t *)b;
+
+	for (i = 0; i < indices; i++, a32++, b32++) {
+		if (*a32 != *b32) {
+			return false;
+		}
+	}
+	return true;
+}
 
 static int debug = 0;
 
@@ -21,54 +100,39 @@ LIST_HEAD(g_hashtbl_generic);
 		PR_DEBUG("hash-tbl: " fmt, ##__VA_ARGS__); \
 	}
 
-static void hashtbl_del_generic_lockheld(struct HashTbl *hashTblp, void *datap);
-static int  hashtbl_add_generic_lockheld(struct HashTbl *hashTblp, void *datap);
-
-char *key_in_hex(unsigned char *key, int key_len)
-{
-	int   i;
-	char *str = (char *)kmalloc(key_len * 3, GFP_KERNEL);
-	for (i = 0; i < key_len; i++) {
-		sprintf(str + i * 3, "%02x ", key[i]);
-	}
-	str[key_len * 3 - 1] = '\0';
-	return str;
-}
-
-inline void *get_key_ptr(struct HashTbl *hashTblp, void *datap)
-{
-	return (void *)datap + hashTblp->key_offset;
-}
+static void __hashtbl_for_each_generic(struct HashTbl*, hashtbl_for_each_generic_cb, void *);
 
 struct HashTbl *hashtbl_init_generic(uint64_t numberOfBuckets,
 				     uint64_t datasize, uint64_t sizehint,
 				     const char *hashtble_name, int key_len,
 				     int key_offset, int node_offset)
 {
+	int i;
+	uint64_t cache_elem_size;
+	size_t tableSize;
 	struct HashTbl *hashTblp = NULL;
-	int tableSize = ((numberOfBuckets * sizeof(struct hlist_head)) +
-			 sizeof(struct HashTbl));
-	unsigned char *tbl_storage_p = NULL;
-	uint64_t       cache_elem_size;
+	struct hashtbl_bkt *tbl_storage_p  = NULL;
 
-	// Since we're not in an atomic context (see GFP_KERNEL flag above) this
-	// is an acceptable alternative to kmalloc however, it should be noted
-	// that this is a little less efficient. The reason for this is
-	// fragmentation that can occur on systems. We noticed this happening in
-	// the field, and if highly fragmented, our driver will fail to load
-	// with a normal kmalloc
-	tbl_storage_p = vmalloc(tableSize);
+	if (!is_power_of_2(numberOfBuckets)) {
+		numberOfBuckets = roundup_pow_of_two(numberOfBuckets);
+	}
+	printk(KERN_INFO "%s: %s bkts:%llu bits:%u", __func__,
+	       hashtble_name, numberOfBuckets, ilog2(numberOfBuckets));
 
-	if (tbl_storage_p == NULL) {
-		HASHTBL_PRINT("Failed to allocate %lluB at %s:%d.",
-			      (numberOfBuckets * sizeof(struct hlist_head)) +
-				      sizeof(struct HashTbl),
-			      __FUNCTION__, __LINE__);
+	hashTblp = kzalloc(sizeof(*hashTblp), GFP_KERNEL);
+	if (!hashTblp) {
 		return NULL;
 	}
 
-	// With kzalloc we get zeroing for free, with vmalloc we need to do it
-	// ourself
+	tableSize = (numberOfBuckets * sizeof(struct hashtbl_bkt));
+
+	tbl_storage_p  = vmalloc(tableSize);
+
+	if (!tbl_storage_p) {
+		HASHTBL_PRINT("Failed to allocate %luB at %s:%d.", tableSize,
+			      __FUNCTION__, __LINE__);
+		return NULL;
+	}
 	memset(tbl_storage_p, 0, tableSize);
 
 	if (sizehint > datasize) {
@@ -80,26 +144,44 @@ struct HashTbl *hashtbl_init_generic(uint64_t numberOfBuckets,
 	HASHTBL_PRINT("Cache=%s elemsize=%llu hint=%llu\n", hashtble_name,
 		      cache_elem_size, sizehint);
 
-	hashTblp = (struct HashTbl *)tbl_storage_p;
-	hashTblp->tablePtr =
-		(struct hlist_head *)(tbl_storage_p + sizeof(struct HashTbl));
+	hashTblp->tablePtr = tbl_storage_p;
 	hashTblp->numberOfBuckets = numberOfBuckets;
-	cb_initspinlock(&(hashTblp->tableSpinlock));
 	hashTblp->key_len     = key_len;
 	hashTblp->key_offset  = key_offset;
 	hashTblp->node_offset = node_offset;
 	hashTblp->hash_cache  = NULL;
-	hashTblp->base_size   = tableSize + sizeof(struct HashTbl);
+	hashTblp->base_size   = tableSize + sizeof(*hashTblp);
 	strncpy((char *)hashTblp->name, hashtble_name, sizeof(hashTblp->name));
+	if (!debug) {
+		// Make hash more random
+		get_random_bytes(&hashTblp->secret, sizeof(hashTblp->secret));
+	}
+	// Use 32 bit aligned key comparison when possible.
+	hashTblp->cmp_key = cmp_key_u8;
+	hashTblp->cmp_len = key_len;
+	if ((hashTblp->cmp_len % sizeof(uint32_t)) == 0) {
+		hashTblp->cmp_len = hashTblp->cmp_len / sizeof(uint32_t);
+		hashTblp->cmp_key = cmp_key_u32;
+		PR_DEBUG("%s: %s using cmp_key_u32: %d %d\n", __func__,
+			 hashTblp->name, hashTblp->key_len, hashTblp->cmp_len);
+	}
 
 	if (cache_elem_size) {
-		hashTblp->hash_cache =
-			kmem_cache_create(hashtble_name, cache_elem_size, 0,
-					  SLAB_HWCACHE_ALIGN, NULL);
+		hashTblp->hash_cache = kmem_cache_create(hashtble_name, cache_elem_size,
+							 0, 0, NULL);
 		if (!hashTblp->hash_cache) {
-			vfree(hashTblp);
+			vfree(hashTblp->tablePtr);
+			hashTblp->tablePtr = NULL;
+			kfree(hashTblp);
+			hashTblp = NULL;
 			return 0;
 		}
+	}
+
+	// Init per bucket spinlocks
+	for (i = 0; i < hashTblp->numberOfBuckets; i++) {
+		spin_lock_init(&hashTblp->tablePtr[i].lock);
+		INIT_HLIST_HEAD(&hashTblp->tablePtr[i].head);
 	}
 
 	if (!g_hashtbl_generic_lock) {
@@ -111,11 +193,16 @@ struct HashTbl *hashtbl_init_generic(uint64_t numberOfBuckets,
 	list_add(&(hashTblp->genTables), &g_hashtbl_generic);
 	cb_spinunlock(&g_hashtbl_generic_lock);
 
-	HASHTBL_PRINT("Size=%d NumberOfBuckets=%llu\n", tableSize,
+	HASHTBL_PRINT("Size=%lu NumberOfBuckets=%llu\n", tableSize,
 		      numberOfBuckets);
 	HASHTBL_PRINT("ADDR=%p TADDR=%p OFFSET=%lu\n", hashTblp,
 		      hashTblp->tablePtr, sizeof(struct HashTbl));
 	return hashTblp;
+}
+
+static int _hashtbl_delete_callback(struct HashTbl *hashTblp, struct HashTableNode *nodep, void *priv)
+{
+	return ACTION_DELETE;
 }
 
 void hashtbl_shutdown_generic(struct HashTbl *hashTblp)
@@ -126,59 +213,75 @@ void hashtbl_shutdown_generic(struct HashTbl *hashTblp)
 	list_del(&(hashTblp->genTables));
 	cb_spinunlock(&g_hashtbl_generic_lock);
 
-	hashtbl_clear_generic(hashTblp);
+	// Ensures we are last to iterate through entries
+	__hashtbl_for_each_generic(hashTblp, _hashtbl_delete_callback, NULL);
 
 	HASHTBL_PRINT("hash shutdown inst=%ld alloc=%ld\n",
 		      atomic64_read(&(hashTblp->tableInstance)),
 		      atomic64_read(&(hashTblp->tableAllocs)));
 
-	cb_destroyspinlock(&(hashTblp->tableSpinlock));
+	if (hashTblp->tablePtr) {
+		vfree(hashTblp->tablePtr);
+		hashTblp->tablePtr = NULL;
+	}
+
 	if (hashTblp->hash_cache) {
 		kmem_cache_destroy(hashTblp->hash_cache);
+		hashTblp->hash_cache = NULL;
 	}
-	vfree(hashTblp);
-}
-
-static int _hashtbl_delete_callback(struct HashTbl *	  hashTblp,
-				    struct HashTableNode *nodep, void *priv)
-{
-	return ACTION_DELETE;
+	kfree(hashTblp);
+	hashTblp = NULL;
 }
 
 void hashtbl_clear_generic(struct HashTbl *hashTblp)
 {
-	HASHTBL_PRINT("ADDR=%p TADDR=%p OFFSET=%lu\n", hashTblp,
-		      hashTblp->tablePtr, sizeof(struct HashTbl));
-
 	hashtbl_for_each_generic(hashTblp, _hashtbl_delete_callback, NULL);
 }
 
-void hashtbl_for_each_generic(struct HashTbl *		  hashTblp,
-			      hashtbl_for_each_generic_cb callback, void *priv)
+void hashtbl_for_each_generic(struct HashTbl *hashTblp,
+			      hashtbl_for_each_generic_cb callback,
+			      void *priv)
+{
+	if (!hashTblp) {
+		return;
+	}
+
+	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		return;
+	}
+
+	__hashtbl_for_each_generic(hashTblp, callback, priv);
+}
+
+static void __hashtbl_for_each_generic(struct HashTbl *hashTblp,
+				       hashtbl_for_each_generic_cb callback,
+				       void *priv)
 {
 	int		   i;
 	uint64_t	   numberOfBuckets;
-	struct hlist_head *hashtbl_tbl = NULL;
+	struct hashtbl_bkt *hashtbl_tbl = NULL;
+	unsigned long flags;
 
 	if (!hashTblp) return;
 
 	hashtbl_tbl	= hashTblp->tablePtr;
 	numberOfBuckets = hashTblp->numberOfBuckets;
 
-	cb_spinlock(&(hashTblp->tableSpinlock));
-
 	// May need to walk the lists too
 	for (i = 0; i < numberOfBuckets; ++i) {
-		struct hlist_head *   bucketp = &hashtbl_tbl[i];
-		struct HashTableNode *nodep   = 0;
-		struct hlist_node *   tmp;
-		if (!hlist_empty(bucketp)) {
+		struct hashtbl_bkt *bucketp = &hashtbl_tbl[i];
+		struct HashTableNode *nodep = NULL;
+		struct hlist_node *tmp;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
+		struct hlist_node *_nodep;
+#endif
+
+		flags = lock_bucket(bucketp);
+		if (!hlist_empty(&bucketp->head)) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-			hlist_for_each_entry_safe (nodep, tmp, bucketp, link)
+			hlist_for_each_entry_safe(nodep, tmp, &bucketp->head, link)
 #else
-			struct hlist_node *_nodep;
-			hlist_for_each_entry_safe (nodep, _nodep, tmp, bucketp,
-						   link)
+			hlist_for_each_entry_safe(nodep, _nodep, tmp, &bucketp->head, link)
 #endif
 			{
 
@@ -186,7 +289,7 @@ void hashtbl_for_each_generic(struct HashTbl *		  hashTblp,
 						    get_datap(hashTblp, nodep),
 						    priv)) {
 				case ACTION_DELETE:
-					hlist_del(&nodep->link);
+					hlist_del_init(&nodep->link);
 					if (hashTblp->hash_cache) {
 						kmem_cache_free(
 							hashTblp->hash_cache,
@@ -199,198 +302,247 @@ void hashtbl_for_each_generic(struct HashTbl *		  hashTblp,
 						&(hashTblp->tableInstance));
 					break;
 				case ACTION_STOP:
-					goto Exit;
-					break;
+					unlock_bucket(bucketp, flags);
+					return;
 				case ACTION_CONTINUE:
 				default:
 					break;
 				}
 			}
 		}
+		unlock_bucket(bucketp, flags);
 	}
-
-Exit:
-	cb_spinunlock(&(hashTblp->tableSpinlock));
 }
 
-static int hash_key(void *key, int len, int bucket_num)
-{
-	int	     i;
-	char *	     data = (char *)key;
-	unsigned int hash = 5381;
-	for (i = 0; i < len; i++) {
-		hash = ((hash << 5) + hash) + data[i]; // hash * 33 + data[i]
-	}
-	return hash % bucket_num;
-}
-
-static int hashtbl_add_generic_lockheld(struct HashTbl *hashTblp, void *datap)
-{
-	uint64_t	   bucket_indx;
-	struct hlist_head *bucketp = NULL;
-	char *		   key_str;
-	if (NULL == datap) {
-		return -1;
-	}
-
-	bucket_indx = hash_key(get_key_ptr(hashTblp, datap), hashTblp->key_len,
-			       hashTblp->numberOfBuckets);
-	bucketp	    = &(hashTblp->tablePtr[bucket_indx]);
-
-	hlist_add_head(&get_nodep(hashTblp, datap)->link, bucketp);
-	if (debug) {
-		key_str = key_in_hex(get_key_ptr(hashTblp, datap),
-				     hashTblp->key_len);
-		HASHTBL_PRINT("%s: bucket=%llu key=%s\n", __FUNCTION__,
-			      bucket_indx, key_str);
-		kfree(key_str);
-	}
-
-	atomic64_inc(&(hashTblp->tableInstance));
-	return 0;
-}
-
+// Does not handle existing entry or handle racing
 int hashtbl_add_generic(struct HashTbl *hashTblp, void *datap)
 {
+	u32 hash;
+	int bucket_indx;
+	struct hashtbl_bkt *bucketp;
+	unsigned long flags;
 	int ret = 0;
+	struct HashTableNode *node;
+
+	if (!hashTblp || !datap) {
+		return -EINVAL;
+	}
+
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
 		return -1;
 	}
 
-	cb_spinlock(&(hashTblp->tableSpinlock));
-	ret = hashtbl_add_generic_lockheld(hashTblp, datap);
-	cb_spinunlock(&(hashTblp->tableSpinlock));
+	hash = hashtbl_hash_key(hashTblp, get_key_ptr(hashTblp, datap));
+	node = get_nodep(hashTblp, datap);
+	node->hash = hash;
+
+	bucket_indx = hashtbl_bkt_index(hashTblp, hash);
+	bucketp = &(hashTblp->tablePtr[bucket_indx]);
+
+	flags = lock_bucket(bucketp);
+	hlist_add_head(&node->link, &bucketp->head);
+	atomic64_inc(&(hashTblp->tableInstance));
+	unlock_bucket(bucketp, flags);
 
 	return ret;
 }
 
 void *hashtbl_get_generic(struct HashTbl *hashTblp, void *key)
 {
-	uint64_t	   bucket_indx;
-	struct hlist_head *bucketp;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
-	struct hlist_node *_nodep = NULL;
-#endif
+	u32 hash;
+	int bucket_indx;
+	struct hashtbl_bkt *bucketp;
 	struct HashTableNode *nodep = NULL;
-	char *		      key_str;
+	unsigned long flags;
+	void *datap = NULL;
+
+	if (!hashTblp || !key) {
+		goto ng_exit;
+	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
 		goto ng_exit;
 	}
 
-	bucket_indx =
-		hash_key(key, hashTblp->key_len, hashTblp->numberOfBuckets);
+	hash = hashtbl_hash_key(hashTblp, key);
+	bucket_indx = hashtbl_bkt_index(hashTblp, hash);
 	bucketp = &(hashTblp->tablePtr[bucket_indx]);
 
-	if (debug) {
-		key_str = key_in_hex(key, hashTblp->key_len);
-		HASHTBL_PRINT("%s: bucket=%llu key=%s\n", __FUNCTION__,
-			      bucket_indx, key_str);
-		kfree(key_str);
-	}
+	flags = lock_bucket(bucketp);
 
-	cb_spinlock(&(hashTblp->tableSpinlock));
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-	hlist_for_each_entry (nodep, bucketp, link)
-#else
-	hlist_for_each_entry (nodep, _nodep, bucketp, link)
-#endif
-	{
-		if (memcmp(key,
-			   get_key_ptr(hashTblp, get_datap(hashTblp, nodep)),
-			   hashTblp->key_len) == 0) {
-			cb_spinunlock(&(hashTblp->tableSpinlock));
-			return get_datap(hashTblp, nodep);
-		}
+	nodep = __lookup_entry_safe(hashTblp, &bucketp->head, hash, key);
+	if (nodep) {
+		datap = get_datap(hashTblp, nodep);
 	}
-	cb_spinunlock(&(hashTblp->tableSpinlock));
+	unlock_bucket(bucketp, flags);
 
 ng_exit:
-	return NULL;
+	return datap;
 }
 
-static void hashtbl_del_generic_lockheld(struct HashTbl *hashTblp, void *datap)
-{
-	struct HashTableNode *nodep = get_nodep(hashTblp, datap);
-
-	// We saw some problems with this pointer being NULL.  I want to check
-	// it just in case.
-	if ((&nodep->link)->pprev != NULL) {
-		hlist_del(&nodep->link);
-
-		if (atomic64_read(&(hashTblp->tableInstance)) == 0) {
-			HASHTBL_PRINT("hashtbl_del: underflow!!\n");
-		} else {
-			atomic64_dec(&(hashTblp->tableInstance));
-		}
-	} else {
-		PRINTK(KERN_WARNING,
-		       "Attempt to delete a NULL object from the hash table");
-	}
-}
-
+// Assumes entry exists once
 void *hashtbl_del_by_key_generic(struct HashTbl *hashTblp, void *key)
 {
-	uint64_t	   bucket_indx;
-	struct hlist_head *bucketp;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 10, 0)
-	struct hlist_node *_nodep;
-#endif
+	u32 hash;
+	int bucket_indx;
+	struct hashtbl_bkt *bucketp;
 	struct HashTableNode *nodep;
-	struct hlist_node *   tmp;
-	char *		      key_str;
+	unsigned long flags;
+	void *datap = NULL;
+
+	if (!hashTblp || !key) {
+		goto ndbk_exit;
+	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
 		goto ndbk_exit;
 	}
 
-	bucket_indx =
-		hash_key(key, hashTblp->key_len, hashTblp->numberOfBuckets);
+	hash = hashtbl_hash_key(hashTblp, key);
+	bucket_indx = hashtbl_bkt_index(hashTblp, hash);
 	bucketp = &(hashTblp->tablePtr[bucket_indx]);
 
-	if (debug) {
-		key_str = key_in_hex(key, hashTblp->key_len);
-		HASHTBL_PRINT("%s: bucket=%llu key=%s\n", __FUNCTION__,
-			      bucket_indx, key_str);
-		kfree(key_str);
-	}
-
-	cb_spinlock(&(hashTblp->tableSpinlock));
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-	hlist_for_each_entry_safe (nodep, tmp, bucketp, link)
-#else
-	hlist_for_each_entry_safe (nodep, _nodep, tmp, bucketp, link)
-#endif
-	{
-		void *datap = get_datap(hashTblp, nodep);
-		if (memcmp(key, get_key_ptr(hashTblp, datap),
-			   hashTblp->key_len) == 0) {
-			hashtbl_del_generic_lockheld(hashTblp, datap);
-			cb_spinunlock(&(hashTblp->tableSpinlock));
-			return datap;
+	flags = lock_bucket(bucketp);
+	nodep = __lookup_entry_safe(hashTblp, &bucketp->head, hash, key);
+	if (nodep &&
+		likely((&nodep->link)->pprev != NULL)) {
+		datap = get_datap(hashTblp, nodep);
+		hlist_del_init(&nodep->link);
+		if (atomic64_read(&(hashTblp->tableInstance)) == 0) {
+			HASHTBL_PRINT("hashtbl_del: underflow!!\n");
+		} else {
+			atomic64_dec(&(hashTblp->tableInstance));
 		}
 	}
-	cb_spinunlock(&(hashTblp->tableSpinlock));
+	unlock_bucket(bucketp, flags);
 
 ndbk_exit:
-	return NULL;
+	return datap;
 }
 
+// Insert only if it doesn't exist yet. Prevent's duplicates
+// and allows us to know when there is racing.
+int hashtbl_add_safe_generic(struct HashTbl *hashTblp, void *datap)
+{
+	u32 hash;
+	int bucket_indx;
+	struct hashtbl_bkt *bucketp;
+	unsigned long flags;
+	int ret = 0;
+	struct HashTableNode *node;
+	struct HashTableNode *old_node;
+	void *key;
+
+	if (!hashTblp || !datap) {
+		return -EINVAL;
+	}
+
+	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		return -1;
+	}
+
+	key = get_key_ptr(hashTblp, datap);
+	hash = hashtbl_hash_key(hashTblp, key);
+	node = get_nodep(hashTblp, datap);
+	node->hash = hash;
+
+	bucket_indx = hashtbl_bkt_index(hashTblp, hash);
+	bucketp = &(hashTblp->tablePtr[bucket_indx]);
+
+	flags = lock_bucket(bucketp);
+	old_node = __lookup_entry_safe(hashTblp, &bucketp->head, hash, key);
+
+	if (old_node) {
+		ret = -EEXIST;
+	} else {
+		hlist_add_head(&node->link, &bucketp->head);
+		atomic64_inc(&(hashTblp->tableInstance));
+	}
+	unlock_bucket(bucketp, flags);
+
+	return ret;
+}
+
+// On success must be paired with a hashtbl_unlock_bucket
+bool hashtbl_getlocked_bucket(struct HashTbl *hashTblp, void *key, void **datap,
+			      struct hashtbl_bkt **bkt, unsigned long *flags)
+{
+	u32 hash;
+	int bucket_indx;
+	struct hashtbl_bkt *bucketp;
+	struct HashTableNode *nodep = NULL;
+	unsigned long local_flags;
+
+	if (!hashTblp || !key || !datap || !bkt || !flags) {
+		return false;
+	}
+	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		return false;
+	}
+
+	hash = hashtbl_hash_key(hashTblp, key);
+	bucket_indx = hashtbl_bkt_index(hashTblp, hash);
+	bucketp = &(hashTblp->tablePtr[bucket_indx]);
+
+	local_flags = lock_bucket(bucketp);
+
+	nodep = __lookup_entry_safe(hashTblp, &bucketp->head, hash, key);
+	if (!nodep) {
+		unlock_bucket(bucketp, local_flags);
+		return false;
+	}
+
+	*datap = get_datap(hashTblp, nodep);
+	*bkt = bucketp;
+	*flags = local_flags;
+	return true;
+}
+void hashtbl_unlock_bucket(struct hashtbl_bkt *bkt, unsigned long flags)
+{
+	if (!bkt) {
+		return;
+	}
+	unlock_bucket(bkt, flags);
+}
+
+// Assumes key has not been modified
 void hashtbl_del_generic(struct HashTbl *hashTblp, void *datap)
 {
+	int bucket_indx;
+	struct HashTableNode *nodep;
+	struct hashtbl_bkt *bucketp;
+	unsigned long flags;
+
+	if (!datap || !hashTblp) {
+		return;
+	}
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
 		return;
 	}
 
-	cb_spinlock(&(hashTblp->tableSpinlock));
-	hashtbl_del_generic_lockheld(hashTblp, datap);
-	cb_spinunlock(&(hashTblp->tableSpinlock));
+	nodep = get_nodep(hashTblp, datap);
+	bucket_indx = hashtbl_bkt_index(hashTblp, nodep->hash);
+	bucketp = &(hashTblp->tablePtr[bucket_indx]);
+
+	flags = lock_bucket(bucketp);
+	if (likely((&nodep->link)->pprev != NULL)) {
+		hlist_del_init(&nodep->link);
+		if (atomic64_read(&(hashTblp->tableInstance)) == 0) {
+			HASHTBL_PRINT("hashtbl_del: underflow!!\n");
+		} else {
+			atomic64_dec(&(hashTblp->tableInstance));
+		}
+	}
+	unlock_bucket(bucketp, flags);
 }
 
 void *hashtbl_alloc_generic(struct HashTbl *hashTblp, int alloc_type)
 {
 	void *datap;
+
+	if (!hashTblp) {
+		return NULL;
+	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
 		return NULL;
@@ -412,6 +564,9 @@ void *hashtbl_alloc_generic(struct HashTbl *hashTblp, int alloc_type)
 
 void hashtbl_free_generic(struct HashTbl *hashTblp, void *datap)
 {
+	if (!hashTblp || !datap) {
+		return;
+	}
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
 		return;
 	}
@@ -487,7 +642,7 @@ struct table_value {
 };
 
 struct entry {
-	struct hlist_node  link;
+	struct HashTableNode link;
 	struct table_key   key;
 	struct table_value value;
 };

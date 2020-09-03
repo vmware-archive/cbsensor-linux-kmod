@@ -23,10 +23,10 @@
 //
 
 struct HashTbl {
-	struct hlist_head *tablePtr;
+	struct hashtbl_bkt *tablePtr;
 	struct list_head   genTables;
 	uint64_t	   numberOfBuckets;
-	uint64_t	   tableSpinlock;
+	uint32_t	   secret;
 	atomic64_t	   tableInstance;
 	atomic64_t	   tableAllocs;
 	atomic64_t	   tableShutdown; // shutting down = 1 running = 0
@@ -35,11 +35,19 @@ struct HashTbl {
 	uint8_t		   name[20];
 	int		   key_offset;
 	int		   node_offset;
-	bool		   base_size;
+	int cmp_len;
+	bool (*cmp_key)(const void *a, const void *b, int len);
+	size_t base_size;
+};
+
+struct hashtbl_bkt {
+	spinlock_t lock;
+	struct hlist_head head;
 };
 
 struct HashTableNode {
 	struct hlist_node link;
+	uint32_t hash;
 };
 
 extern uint64_t		g_hashtbl_generic_lock;
@@ -66,3 +74,10 @@ void		hashtbl_for_each_generic(struct HashTbl *	     tblp,
 int		hashtbl_show_proc_cache(struct seq_file *m, void *v);
 size_t		hashtbl_get_memory(void);
 void		hash_table_test(void);
+
+// Use these when you want to more safely
+// access entry data.
+bool		hashtbl_getlocked_bucket(struct HashTbl *hashTblp, void *key, void **datap,
+					 struct hashtbl_bkt **bkt, unsigned long *flags);
+void		hashtbl_unlock_bucket(struct hashtbl_bkt *bkt, unsigned long flags);
+int		hashtbl_add_safe_generic(struct HashTbl *hashTblp, void *datap);
