@@ -70,8 +70,21 @@ void cb_destroyspinlock(const uint64_t *sp);
 void cb_spinunlock(const uint64_t *sp);
 void cb_spinlock(const uint64_t *sp);
 
+static inline void *__cb_cache_alloc(struct kmem_cache *cache, gfp_t gfp)
+{
+	void *dest = kmem_cache_alloc(cache, gfp);
+	if (dest) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
+		memset(dest, 0, cache->object_size);
+#else
+		memset(dest, 0, cache->buffer_size);
+#endif
+	}
+	return dest;
+}
+
 //-------------------------------------------------
-#if LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0)
+#if LINUX_VERSION_CODE == KERNEL_VERSION(3, 10, 0) && RHEL_MINOR <= 3
 // CB-10446
 // We observed a kernel panic in kmem_cache_alloc affecting only Centos/RHEL 7.
 // This was
@@ -82,9 +95,9 @@ void cb_spinlock(const uint64_t *sp);
 //
 // http://lkml.iu.edu/hypermail/linux/kernel/1403.1/04340.html
 // https://patchwork.ozlabs.org/patch/303498/
-#define cb_kmem_cache_alloc(cache, gfp) kmem_cache_alloc(cache, GFP_ATOMIC)
+#define cb_kmem_cache_alloc(cache, gfp) __cb_cache_alloc(cache, GFP_ATOMIC)
 #else
-#define cb_kmem_cache_alloc(cache, gfp) kmem_cache_alloc(cache, gfp)
+#define cb_kmem_cache_alloc(cache, gfp) __cb_cache_alloc(cache, gfp)
 #endif
 
 #define CB__NR_clone 0x00000001
@@ -295,7 +308,7 @@ int	cb_lsm_mmap_file_get(struct seq_file *m, void *v);
 ssize_t cb_lsm_mmap_file_set(struct file *file, const char *buf, size_t size,
 			     loff_t *ppos);
 #else
-int	cb_lsm_file_mmap_get(struct seq_file *m, void *v);
+int cb_lsm_file_mmap_get(struct seq_file *m, void *v);
 ssize_t cb_lsm_file_mmap_set(struct file *file, const char *buf, size_t size,
 			     loff_t *ppos);
 #endif
