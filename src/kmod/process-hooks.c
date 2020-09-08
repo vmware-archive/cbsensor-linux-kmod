@@ -176,7 +176,7 @@ void cb_task_free(struct task_struct *p)
 	}
 
 	if (cbIngoreProcess(p->pid)) {
-                cbClearIgnoredProcess(p->pid);
+		cbClearIgnoredProcess(p->pid);
 	}
 
 	ret = process_tracking_remove_process(p->pid);
@@ -210,7 +210,7 @@ int task_wait(struct task_struct *p)
 	MODULE_GET();
 
 	if (cbIngoreProcess(pid)) {
-	        cbClearIgnoredProcess(pid);
+		cbClearIgnoredProcess(pid);
 	}
 
 	// If not the main thread then we shouldn't care too
