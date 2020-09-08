@@ -54,7 +54,9 @@ cbsensor-objs := drvmain.o \
                  file-types.o \
                  cb-procfs.o \
                  module-hooks.o \
-                 test-logging.o
+                 test-logging.o \
+                 ktfutce.o \
+
 CC=${CMAKE_C_COMPILER}")
 
 add_custom_command(OUTPUT ${DRIVER_FILE}
@@ -85,6 +87,7 @@ add_custom_command(OUTPUT ${DRIVER_FILE}
             syscall_stubs.S
             task-helper.c
             test-logging.c
+            ktfutce.c
         VERBATIM)
 
 add_custom_target(cbsensor ALL DEPENDS ${DRIVER_FILE})
