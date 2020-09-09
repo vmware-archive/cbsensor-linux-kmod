@@ -319,6 +319,16 @@ void cbSetIgnoredProcess(pid_t pid)
 	}
 }
 
+void cbClearIgnoredProcess(pid_t pid)
+{
+	int64_t max = atomic64_read((atomic64_t *)&g_cb_ignored_pid_count);
+
+	if (max) {
+		atomic64_set((atomic64_t *)&g_cb_ignored_pid_count, 0);
+		memset(g_cb_ignored_pids, 0, sizeof(g_cb_ignored_pids));
+	}
+}
+
 bool cbIngoreUid(pid_t uid)
 {
 	int64_t i;

@@ -58,6 +58,7 @@ extern atomic64_t module_used;
 // Exclusion functions
 //
 extern void cbSetIgnoredProcess(pid_t pid);
+extern void cbClearIgnoredProcess(pid_t pid);
 extern bool cbIngoreProcess(pid_t pid);
 extern void cbSetIgnoredUid(uid_t uid);
 extern bool cbIngoreUid(pid_t uid);

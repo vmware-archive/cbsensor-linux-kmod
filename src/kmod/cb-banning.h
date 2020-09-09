@@ -13,6 +13,7 @@ extern inline bool cbClearBannedProcessInode(uint64_t ino);
 extern bool	   cbKillBannedProcessByInode(uint64_t ino);
 extern bool	   cbIngoreProcess(pid_t pid);
 extern void	   cbSetIgnoredProcess(pid_t pid);
+extern void	   cbClearIgnoredProcess(pid_t pid);
 extern bool	   cbIngoreUid(pid_t uid);
 extern void	   cbSetIgnoredUid(uid_t uid);
 extern void	   cbClearAllBans(void);
