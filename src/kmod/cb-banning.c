@@ -326,7 +326,7 @@ void cbClearIgnoredProcess(pid_t pid)
 	if (max) {
 		atomic64_set((atomic64_t *)&g_cb_ignored_pid_count, 0);
 		memset(g_cb_ignored_pids, 0,
-		       sizeof(pid_t) * CB_SENSOR_MAX_PIDS);
+		       sizeof(g_cb_ignored_pids));
 	}
 }
 
