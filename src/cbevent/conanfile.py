@@ -20,6 +20,10 @@ class cbeventConan(ConanFile):
 
     def package(self):
         self.copy("src/*.h", dst="include", keep_path=False)
+        self.copy("lib/*.a", dst="lib", keep_path=False)
+
 
     def package_info(self):
         self.cpp_info.includedirs = ["include"]
+        self.cpp_info.libdirs = ["lib"]
+        self.cpp_info.libs = ["cbevent_json"]

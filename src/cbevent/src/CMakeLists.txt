@@ -33,3 +33,7 @@ target_include_directories(${PROJECT_NAME} INTERFACE
         ${CONAN_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}
         )
+
+add_library(cbevent_json
+        CB_EVENT_JSON.cpp
+        )
