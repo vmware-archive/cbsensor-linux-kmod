@@ -48,7 +48,7 @@ cbsensor-objs := drvmain.o \
                  cb-banning.o \
                  netfilter.o \
                  hash-table-generic.o \
-                 file-process-tracking.o \
+                 file-write-tracking.o \
                  syscall_init.o \
                  syscall_stubs.o \
                  file-types.o \
@@ -66,7 +66,7 @@ add_custom_command(OUTPUT ${DRIVER_FILE}
             drvmain.c
             file-helper.c
             file-hooks.c
-            file-process-tracking.c
+            file-write-tracking.c
             file-types.c
             fops-comm.c
             hash-table-generic.c

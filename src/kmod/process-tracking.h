@@ -56,11 +56,6 @@ struct ProcessTracking {
 	uint64_t process_exit;
 
 	struct task_struct *taskp;
-	// This list contains all the open files tracked by the kernel for this
-	// process. Manipulation of this list is only done in
-	// file-process-tracking, and is protected by a mutex in
-	// file-process-tracking.
-	struct list_head files;
 };
 
 bool process_tracking_initialize(void);
@@ -85,4 +80,3 @@ bool process_tracking_get_process(pid_t pid, struct ProcessTracking **procp);
 void process_tracking_update_op_cnts(struct ProcessTracking *procp,
 				     enum CB_EVENT_TYPE event_type, int action);
 bool process_tracking_should_track_user(void);
-struct list_head *process_tracking_get_file_list(pid_t pid);

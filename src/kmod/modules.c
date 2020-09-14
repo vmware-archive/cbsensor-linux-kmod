@@ -66,12 +66,6 @@ int on_file_mmap(struct file *file, unsigned long reqprot, unsigned long prot,
 		goto mmap_exit;
 	}
 
-	// Skip if excluded
-	if (is_excluded_file(inode)) {
-		PR_DEBUG("inode %ld is excluded", inode->i_ino);
-		goto mmap_exit;
-	}
-
 	if (tid != INITTASK) {
 		if (cbKillBannedProcessByInode((uint64_t)inode->i_ino)) {
 			// do the kill here

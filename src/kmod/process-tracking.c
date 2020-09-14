@@ -9,7 +9,6 @@
 #include <linux/binfmts.h>
 #include <linux/cred.h>
 #endif
-#include "file-process-tracking.h"
 #include "process-tracking.h"
 
 #include "../cbevent/src/CB_EVENT_FILTER.h"
@@ -64,6 +63,7 @@ void process_tracking_shutdown(void)
 	if (g_process_tracking_table) {
 		cancel_delayed_work(&g_proc_clear_dead_work);
 		hashtbl_shutdown_generic(g_process_tracking_table);
+		g_process_tracking_table = NULL;
 	}
 }
 
@@ -112,9 +112,8 @@ bool process_tracking_insert_process(pid_t pid, pid_t tid, pid_t parent,
 	procp->path[0]	      = 0;
 	procp->path[PATH_MAX] = 0;
 
-	strncpy(procp->path, event->processStart.path, PATH_MAX);
+	memcpy(procp->path, event->processStart.path, PATH_MAX);
 	procp->path_found = event->processStart.path_found;
-	INIT_LIST_HEAD(&(procp->files));
 
 	g_pt_process_op_cnt += 1;
 	g_pt_process_create += 1;
@@ -146,10 +145,6 @@ bool process_tracking_remove_process(pid_t pid)
 	if (!procp) {
 		return false;
 	}
-
-	// Notify the file tracking logic that this process has exited and any
-	// open files should be purged.
-	check_open_file_list_on_exit(&(procp->files));
 
 	hashtbl_free_generic(g_process_tracking_table, procp);
 
@@ -280,28 +275,12 @@ bool process_tracking_update_process(pid_t pid, pid_t tid, pid_t parent,
 	procp->taskp = taskp;
 
 	// Always update the path
-	strncpy(procp->path, event->processStart.path, PATH_MAX);
+	memcpy(procp->path, event->processStart.path, PATH_MAX);
 	procp->path_found = event->processStart.path_found;
 
 	process_tracking_update_op_cnts(procp, event_type, action);
 
 	return true;
-}
-
-// The file-process-tracking logic needs to know the list to add a file into. We
-// return it directly.
-struct list_head *process_tracking_get_file_list(pid_t pid)
-{
-	struct ProcessTracking *procp;
-	struct pt_table_key	key = { pid };
-
-	procp = (struct ProcessTracking *)hashtbl_get_generic(
-		g_process_tracking_table, &key);
-	if (!procp) {
-		PR_DEBUG("update process failed to find pid=%d", pid);
-		return NULL;
-	}
-	return &(procp->files);
 }
 
 struct ProcessTracking *is_process_tracked_get_state(pid_t pid)
@@ -524,11 +503,9 @@ static int _hashtbl_clear_dead_callback(struct HashTbl *      hashTblp,
 					struct HashTableNode *nodep, void *priv)
 {
 	pid_t			pid;
-	int			action	    = ACTION_CONTINUE;
-	struct ProcessTracking *procp	    = NULL;
-	struct CB_EVENT *	event	    = NULL;
-	bool *			found	    = (bool *)priv;
-	bool			local_found = false;
+	int			action = ACTION_CONTINUE;
+	struct ProcessTracking *procp  = NULL;
+	struct CB_EVENT *	event  = NULL;
 
 	if (!nodep) {
 		goto out;
@@ -540,12 +517,6 @@ static int _hashtbl_clear_dead_callback(struct HashTbl *      hashTblp,
 
 	if (cb_find_task(pid) == NULL) {
 		action = ACTION_DELETE;
-
-		local_found =
-			check_open_file_list_on_exit_lock(&(procp->files));
-		if (found != NULL && !*found) {
-			*found = local_found;
-		}
 
 		// Just as process_tracking_remove_process calls it
 
@@ -562,22 +533,8 @@ out:
 
 static void process_tracking_for_each_clear_dead(void)
 {
-	bool found = false;
-
-	if (!g_file_list_lock) {
-		return;
-	}
-	cb_spinlock(&g_file_list_lock);
 	hashtbl_for_each_generic(g_process_tracking_table,
-				 _hashtbl_clear_dead_callback, &found);
-	cb_spinunlock(&g_file_list_lock);
-
-	if (found) {
-		// Schedule the cleanup work to run immediately in the common
-		// work queue. There may be other stuff in the Queue, but I do
-		// not really care when it happens.
-		schedule_work(&g_file_track_work);
-	}
+				 _hashtbl_clear_dead_callback, NULL);
 }
 
 // We could schedule this to be flushed/ran more immediately if the

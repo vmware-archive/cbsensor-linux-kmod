@@ -4,15 +4,13 @@
  */
 
 #define DS_MYSUBSYS (DS_FILE | DS_HOOK)
-#include "file-process-tracking.h"
 #include "file-types.h"
+#include "file-write-tracking.h"
 #include "priv.h"
 #include "process-tracking.h"
 
 #include <linux/file.h>
 #include <linux/magic.h>
-
-static unsigned long g_log_messages_inode = 0;
 
 #define N_ELEM(x) (sizeof(x) / sizeof(*x))
 
@@ -60,6 +58,9 @@ static const special_file_t special_files[] = {
 	DISABLE_SPECIAL_FILE_SETUP(""),
 	DISABLE_SPECIAL_FILE_SETUP(""),
 };
+
+static void do_file_write_event(struct file *file);
+static void do_file_close_event(struct file *file);
 
 //
 // FUNCTION:
@@ -120,23 +121,6 @@ int isSpecialFile(char *pathname, int len)
 	return 0;
 }
 
-static void check_for_log_messages(struct inode *inode, char *pathname,
-				   bool forcecheck)
-{
-	// If we don't know what the messages inode is then figure it out
-	if (g_log_messages_inode == 0 || forcecheck) {
-		if (strstr(pathname, "/var/log/messages") == pathname) {
-			g_log_messages_inode = inode->i_ino;
-		}
-	}
-}
-
-bool is_excluded_file(struct inode *inode)
-{
-	// Ignore /var/log/messages
-	return g_log_messages_inode == inode->i_ino;
-}
-
 bool is_interesting_file(umode_t mode)
 {
 	return (S_ISREG(mode) && (!S_ISDIR(mode)) && (!S_ISLNK(mode)));
@@ -187,6 +171,7 @@ out:
 	return sb;
 }
 
+#if 0
 static dev_t get_dev_from_file(struct file *filep)
 {
 	dev_t		    dev = 0;
@@ -197,6 +182,7 @@ static dev_t get_dev_from_file(struct file *filep)
 	}
 	return dev;
 }
+#endif
 
 static inline bool __is_special_filesystem(struct super_block *sb)
 {
@@ -215,16 +201,22 @@ static inline bool __is_special_filesystem(struct super_block *sb)
 	case FUTEXFS_SUPER_MAGIC:
 	case ANON_INODE_FS_MAGIC:
 	case DEBUGFS_MAGIC:
+#ifdef PIPEFS_MAGIC
+	case PIPEFS_MAGIC:
+#endif /* PIPEFS_MAGIC */
 #ifdef BINDERFS_SUPER_MAGIC
 	case BINDERFS_SUPER_MAGIC:
 #endif /* BINDERFS_SUPER_MAGIC */
 #ifdef BPF_FS_MAGIC
 	case BPF_FS_MAGIC:
 #endif /* BPF_FS_MAGIC */
+#ifdef TRACEFS_MAGIC
+	case TRACEFS_MAGIC
+#endif /* TRACEFS_MAGIC */
 
 		return true;
 
-	default:
+		default:
 		return false;
 	}
 
@@ -458,198 +450,6 @@ CATCH_DEFAULT:
 	return xcode;
 }
 
-static void do_file_event(struct file *file, enum CB_EVENT_TYPE eventType,
-			  const char *desc)
-{
-	struct CB_EVENT *	   event;
-	struct inode *		   inode;
-	struct FILE_PROCESS_VALUE *fileProcess;
-	char *			   pathname = NULL;
-	pid_t			   pid	    = getpid(current);
-	bool			   doClose  = false;
-	dev_t			   dev	    = 0;
-
-	if (cbIngoreProcess(pid)) {
-		return;
-	}
-
-	if (!should_log(eventType)) {
-		return;
-	}
-
-	inode = get_inode_from_file(file);
-	if (inode == NULL) {
-		return;
-	}
-
-	// Skip if not interesting
-	if (!is_interesting_file(inode->i_mode)) {
-		return;
-	}
-
-	// Special file systems don't need to create events
-	if (may_skip_file_event_for_special_fs(file)) {
-		return;
-	}
-
-	// Skip if excluded
-	if (is_excluded_file(inode)) {
-		return;
-	}
-
-	// Check to see if the process is tracked already
-	if (!is_process_tracked(pid)) {
-		PR_DEBUG("Fileop pid=%d not tracked", pid);
-		create_process_start_event(current);
-	}
-
-	dev = get_dev_from_file(file);
-
-	fileProcess = file_process_status(inode->i_ino, dev, pid);
-	if (fileProcess && fileProcess->hasBeenWritten) {
-		pathname = fileProcess->path;
-		if (eventType == CB_EVENT_TYPE_FILE_WRITE) {
-			PR_DEBUG("Inode:%lu process:%u written before",
-				 inode->i_ino, pid);
-			goto skip_log;
-		}
-		if (eventType == CB_EVENT_TYPE_FILE_CLOSE ||
-		    eventType == CB_EVENT_TYPE_FILE_DELETE) {
-			PR_DEBUG("Inode:%lu process:%u closed or deleted",
-				 inode->i_ino, pid);
-			// I still need to use the path buffer from fileProcess,
-			// so don't call
-			//  file_process_status_close until later.
-			doClose = true;
-		}
-	} else // status == CLOSED
-	{
-		// If this file is deleted already, then just skip it
-		if (d_unlinked(file->f_path.dentry)) {
-			// If we get here with a deleted file, skip it
-			goto skip_log;
-		}
-
-		if (eventType == CB_EVENT_TYPE_FILE_WRITE) {
-			PR_DEBUG("Inode:%lu process:%u first write",
-				 inode->i_ino, pid);
-			fileProcess = file_process_status_open(inode->i_ino,
-							       dev, pid);
-
-			// If this file has been written to AND that files inode
-			// is in the banned list we need to remove it on the
-			// assumption that the md5 will have changed. It is
-			// entirely possible that the exact bits are written
-			// back, but in that case we will catch it in user
-			// space, by md5, and notify kernel to kill and ban if
-			// necessary.
-			//
-			// This should be a fairly lightweight call as it is
-			// inlined and the hashtable is usually empty and if not
-			// is VERY small.
-			if (cbClearBannedProcessInode(inode->i_ino)) {
-				PR_DEBUG(
-					"%lu was removed from banned inode table.",
-					inode->i_ino);
-			}
-
-			if (fileProcess) {
-				// file_get_path() uses dpath which builds the
-				// path efficiently
-				//  by walking back to the root. It starts with
-				//  a string terminator in the last byte of the
-				//  target buffer and needs to be copied with
-				//  memmove to adjust
-				// Note for CB-6707: The 3.10 kernel
-				// occasionally crashed in d_path when the file
-				// was closed.
-				//  The workaround used dentry->d_iname instead.
-				//  But this only provided the short name and
-				//  not the whole path.  The daemon could no
-				//  longer match the lastWrite to the
-				//  firstWrite. I am now only calling this with
-				//  an open file now so we should be fine.
-				file_get_path(file, fileProcess->path,
-					      &pathname);
-				// The d_path function fills in the buffer from
-				// the end, and may not return the start of
-				//  the buffer. We need to save the start of the
-				//  path inside fileProcess so we can get it
-				//  later.
-				fileProcess->path = pathname;
-
-				// Check to see if this is a special file that
-				// we will not send an event for.  It will save
-				//  us at least one check in the future.
-				fileProcess->isSpecialFile = isSpecialFile(
-					pathname, strlen(pathname));
-			} else {
-				// If we get here something is wrong
-				goto skip_log;
-			}
-		} else if (eventType == CB_EVENT_TYPE_FILE_CLOSE) {
-			PR_DEBUG_RATELIMITED(
-				"Inode:%lu process:%u NOT written before",
-				inode->i_ino, pid);
-			goto skip_log;
-		}
-	}
-
-	event = logger_alloc_event(eventType, current);
-	if (!event) {
-		goto skip_log;
-	}
-
-	if (pathname && strlen(pathname) > 0) {
-		if (eventType == CB_EVENT_TYPE_FILE_CLOSE &&
-		    !fileProcess->isSpecialFile) {
-			PR_DEBUG("Close file %s of type %s", fileProcess->path,
-				 file_type_str(fileProcess->fileType));
-		}
-
-		event->fileGeneric.file_type = fileProcess->fileType;
-		if (pathname[0] == '/') {
-			//
-			// Log it
-			//
-			check_for_log_messages(inode, pathname, true);
-			if (!fileProcess->isSpecialFile) {
-				strncpy(event->fileGeneric.path, pathname,
-					PATH_MAX);
-				PR_DEBUG("%s %s pid:%d ino:%ld mode:%o", desc,
-					 event->fileGeneric.path, pid,
-					 inode->i_ino, inode->i_mode);
-				//
-				// Queue it to be sent to usermode
-				//
-				logger_submit_event(event);
-				goto skip_log;
-			}
-		}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-		else if (eventType == CB_EVENT_TYPE_FILE_CLOSE) {
-			PR_DEBUG("%s %s ino:%ld mode:%o", desc,
-				 event->fileGeneric.path, inode->i_ino,
-				 inode->i_mode);
-			//
-			// Queue it to be sent to usermode
-			//
-			logger_submit_event(event);
-			goto skip_log;
-		}
-#endif
-		else {
-			PR_DEBUG("invalid full path %s event %d", pathname,
-				 eventType);
-		}
-	}
-	logger_free_event_on_error(event);
-skip_log:
-	if (doClose) {
-		file_process_status_close(inode->i_ino, dev, pid);
-	}
-}
-
 int on_file_permission(struct file *file, int mask)
 {
 	bool write = (mask & MAY_WRITE) == MAY_WRITE;
@@ -660,7 +460,7 @@ int on_file_permission(struct file *file, int mask)
 	TRY(xcode == 0);
 
 	if (write) {
-		do_file_event(file, CB_EVENT_TYPE_FILE_WRITE, "write");
+		do_file_write_event(file);
 	}
 
 CATCH_DEFAULT:
@@ -676,7 +476,7 @@ void on_file_free(struct file *file)
 	g_original_ops_ptr->file_free_security(file);
 
 	if (has_write) {
-		do_file_event(file, CB_EVENT_TYPE_FILE_CLOSE, "close");
+		do_file_close_event(file);
 	}
 
 	MODULE_PUT();
@@ -697,15 +497,18 @@ long (*cb_orig_sys_write)(unsigned int fd, const char __user *buf,
 asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 			     size_t count)
 {
-	long			   ret;
-	struct inode *		   inode;
-	struct FILE_PROCESS_VALUE *fileProcess;
-	struct file *		   file = NULL;
-	dev_t			   dev;
-	loff_t			   pre_write_pos;
-	loff_t			   post_write_pos;
-	enum CB_FILE_TYPE	   fileType = filetypeUnknown;
-	char			   buffer[MAX_FILE_BYTES_TO_DETERMINE_TYPE];
+	long	      ret;
+	struct inode *inode;
+	struct file * file = NULL;
+	// dev_t               dev;
+	loff_t		       pre_write_pos;
+	loff_t		       post_write_pos;
+	enum CB_FILE_TYPE      fileType = filetypeUnknown;
+	char		       buffer[MAX_FILE_BYTES_TO_DETERMINE_TYPE];
+	struct file_type_state state;
+	pid_t		       last_tgid;
+	bool		       found_entry;
+	bool		       commit_change = false;
 
 	MODULE_GET();
 
@@ -740,16 +543,21 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 		goto CATCH_DEFAULT;
 	}
 
-	dev	    = get_dev_from_file(file);
-	fileProcess = file_process_status(inode->i_ino, dev, getpid(current));
+	// dev = get_dev_from_file(file);
+	last_tgid = 0;
+	memset(&state, 0, sizeof(state));
+	found_entry = get_file_entry_data(file, &last_tgid, &state, NULL);
 
 	// We do not care about untracked or special files
-	if (!fileProcess || fileProcess->isSpecialFile) {
+	if (!found_entry || state.isSpecialFile) {
 		goto CATCH_DEFAULT;
 	}
 
 	if (pre_write_pos < MAX_FILE_BYTES_TO_DETERMINE_TYPE) {
-		fileProcess->didReadType = false;
+		if (state.didReadType) {
+			commit_change = true;
+		}
+		state.didReadType = false;
 	}
 
 	// Utilize the userspace buffer to get file contents
@@ -760,34 +568,41 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 		}
 		determine_file_type(buffer, MAX_FILE_BYTES_TO_DETERMINE_TYPE,
 				    &fileType, true);
-		PR_DEBUG("Detected file %s of type %s", fileProcess->path,
-			 file_type_str(fileType));
-		fileProcess->fileType	 = fileType;
-		fileProcess->didReadType = true;
+		//        PR_DEBUG("Detected file %s of type %s",
+		//        fileProcess->path, file_type_str(fileType));
+		if (state.fileType != fileType || !state.didReadType) {
+			commit_change = true;
+		}
+		state.fileType	  = fileType;
+		state.didReadType = true;
 		goto CATCH_DEFAULT;
 	}
 
 	// Previously determined the type, so there is
 	// no need seek/read/seek when it hasn't changed
-	if (fileProcess->didReadType) {
+	if (state.didReadType) {
 		goto CATCH_DEFAULT;
 	}
 
 	// Everything else down this path require vfs_read
-	if (!fileProcess->try_vfs_read) {
+	if (!state.try_vfs_read) {
 		goto CATCH_DEFAULT;
 	}
 
 	// We do not want to perform any VFS calls on this file
 	if (may_skip_unsafe_vfs_calls(file)) {
-		fileProcess->try_vfs_read = false;
+		state.try_vfs_read = false;
+		commit_change	   = true;
 		goto CATCH_DEFAULT;
 	}
+
+	// If we made it this far. Commit the change.
+	commit_change = true;
 
 	// The file system file ops do not support vfs_llseek or vfs_read
 	if (!file->f_op || (!file->f_op->read && !file->f_op->aio_read) ||
 	    (!file->f_op->llseek)) {
-		fileProcess->try_vfs_read = false;
+		state.try_vfs_read = false;
 		goto CATCH_DEFAULT;
 	}
 
@@ -810,7 +625,8 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 		// want.
 		llseek_ret = vfs_llseek(file, 0, SEEK_SET);
 		if (llseek_ret != 0) {
-			fileProcess->try_vfs_read = false;
+			state.try_vfs_read = false;
+			commit_change	   = true;
 			// Restore the real file mode
 			file->f_mode = mode;
 			goto CATCH_DEFAULT;
@@ -828,30 +644,99 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 		// will work
 		llseek_ret = vfs_llseek(file, post_write_pos, SEEK_SET);
 		if (llseek_ret != post_write_pos) {
-			fileProcess->try_vfs_read = false;
-			PRINTK(KERN_WARNING,
-			       "Unable to seek back to post write position: %lld[%#llx] on file:%s",
-			       post_write_pos, llseek_ret, fileProcess->path);
+			state.try_vfs_read = false;
+			// PRINTK(KERN_WARNING, "Unable to seek back to post
+			// write position: %lld[%#llx] on file:%s",
+			//    post_write_pos, llseek_ret, fileProcess->path);
 		}
 
 		// Restore the real file mode
 		file->f_mode = mode;
 
 		if (size <= 0) {
-			fileProcess->try_vfs_read = false;
+			state.try_vfs_read = false;
 		} else {
 			determine_file_type(buffer, size, &fileType, true);
-			PR_DEBUG("Detected file %s of type %s",
-				 fileProcess->path, file_type_str(fileType));
-			fileProcess->fileType	 = fileType;
-			fileProcess->didReadType = true;
+			// PR_DEBUG("Detected file %s of type %s",
+			// fileProcess->path, file_type_str(fileType));
+			state.fileType	  = fileType;
+			state.didReadType = true;
 		}
 	}
 
 CATCH_DEFAULT:
+	if (commit_change) {
+		set_file_entry_data(file, NULL, &state, NULL);
+	}
 	if (file) {
 		fput(file);
 	}
 	MODULE_PUT();
 	return ret;
+}
+
+static void do_file_write_event(struct file *file)
+{
+	bool	      found;
+	struct inode *inode;
+	pid_t	      pid	= getpid(current);
+	pid_t	      last_tgid = 0;
+
+	if (cbIngoreProcess(pid)) {
+		return;
+	}
+
+	if (!should_log(CB_EVENT_TYPE_FILE_CREATE)) {
+		return;
+	}
+
+	inode = get_inode_from_file(file);
+	if (!inode) {
+		return;
+	}
+
+	// Skip if not interesting
+	if (!is_interesting_file(inode->i_mode)) {
+		return;
+	}
+
+	// Special file systems don't need to create events
+	if (may_skip_file_event_for_special_fs(file)) {
+		return;
+	}
+
+	found = get_file_entry_data(file, &last_tgid, NULL, NULL);
+	if (found) {
+		if (pid == last_tgid) {
+			return;
+		}
+
+		// Check to see if the process is tracked already
+		if (!is_process_tracked(pid)) {
+			PR_DEBUG("Fileop pid=%d not tracked", pid);
+			create_process_start_event(current);
+		}
+
+		update_file_entry(file, pid);
+	} else {
+		// Check to see if the process is tracked already
+		if (!is_process_tracked(pid)) {
+			PR_DEBUG("Fileop pid=%d not tracked", pid);
+			create_process_start_event(current);
+		}
+		insert_file_entry(file, pid);
+	}
+
+	if (cbClearBannedProcessInode(inode->i_ino)) {
+		PR_DEBUG("%lu was removed from banned inode table.",
+			 inode->i_ino);
+	}
+}
+
+static void do_file_close_event(struct file *file)
+{
+	// This process is not interesting yet
+	if (is_file_tracked(file)) {
+		remove_file_entry(file);
+	}
 }
