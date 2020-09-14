@@ -5,6 +5,7 @@
 
 #include "cb-isolation.h"
 #include "file-write-tracking.h"
+#include "ktfutce.h"
 #include "network-tracking.h"
 #include "priv.h"
 #include "process-tracking.h"
@@ -83,6 +84,7 @@ static int __init cbsensor_init(void)
 	TRY_STEP(BAN, !CbInitializeNetworkIsolation());
 	TRY_STEP(NET_IS, file_helper_init());
 	TRY_STEP(NET_IS, logger_initialize());
+	ktfutce_register();
 	TRY_STEP(TASK, netfilter_initialize(g_enableHooks));
 	TRY_STEP(NET_FIL, file_write_table_init());
 	TRY_STEP(FILE_PROC, lsm_initialize(g_enableHooks));
@@ -104,6 +106,7 @@ CATCH_FILE_PROC:
 CATCH_NET_FIL:
 	netfilter_cleanup(g_enableHooks);
 CATCH_TASK:
+	ktfutce_shutdown();
 	logger_shutdown();
 CATCH_NET_IS:
 	CbDestroyNetworkIsolation();
@@ -133,6 +136,7 @@ void cbsensor_shutdown(void)
 	syscall_shutdown(g_enableHooks);
 	lsm_shutdown();
 	netfilter_cleanup(g_enableHooks);
+	ktfutce_shutdown();
 }
 
 static void __exit cbsensor_cleanup(void)
