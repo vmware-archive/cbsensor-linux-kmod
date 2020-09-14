@@ -66,7 +66,7 @@ void ktfutce_shutdown(void)
 // Enqueue a fork event and ask the kthread to work on it
 int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 {
-	unsigned long flags;
+	unsigned long	    flags;
 	struct clone_event *clone_event = NULL;
 
 	if (!clone_queue.task || !pid) {
@@ -93,7 +93,7 @@ int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 
 static inline struct clone_event *clone_shift(void)
 {
-	unsigned long flags;
+	unsigned long	    flags;
 	struct clone_event *clone_event = NULL;
 
 	spin_lock_irqsave(&clone_queue.lock, flags);
