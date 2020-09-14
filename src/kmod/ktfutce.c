@@ -48,7 +48,6 @@ int ktfutce_register(void)
 	if (IS_ERR(clone_queue.task)) {
 		ret		 = PTR_ERR(clone_queue.task);
 		clone_queue.task = NULL;
-		return ret;
 	}
 	return ret;
 }
