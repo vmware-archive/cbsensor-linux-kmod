@@ -69,12 +69,7 @@ int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 {
 	struct clone_event *clone_event = NULL;
 
-	if (!clone_queue.task) {
-		return -EINVAL;
-	}
-
-	// Can't be zero!
-	if (!pid) {
+	if (!clone_queue.task || !pid) {
 		return -EINVAL;
 	}
 
