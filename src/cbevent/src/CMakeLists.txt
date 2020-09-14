@@ -37,3 +37,5 @@ target_include_directories(${PROJECT_NAME} INTERFACE
 add_library(cbevent_json
         CB_EVENT_JSON.cpp
         )
+        )
+
