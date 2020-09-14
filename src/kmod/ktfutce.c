@@ -66,6 +66,7 @@ void ktfutce_shutdown(void)
 // Enqueue a fork event and ask the kthread to work on it
 int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 {
+	unsigned long flags;
 	struct clone_event *clone_event = NULL;
 
 	if (!clone_queue.task || !pid) {
@@ -81,10 +82,10 @@ int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 	clone_event->pid   = pid;
 	clone_event->event = event;
 
-	spin_lock(&clone_queue.lock);
+	spin_lock_irqsave(&clone_queue.lock, flags);
 	list_add_tail(&clone_event->list, &clone_queue.head);
 	clone_queue.len += 1;
-	spin_unlock(&clone_queue.lock);
+	spin_unlock_irqrestore(&clone_queue.lock, flags);
 	wake_up_interruptible(&clone_wait);
 
 	return 0;
@@ -92,11 +93,12 @@ int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 
 static inline struct clone_event *clone_shift(void)
 {
+	unsigned long flags;
 	struct clone_event *clone_event = NULL;
 
-	spin_lock(&clone_queue.lock);
+	spin_lock_irqsave(&clone_queue.lock, flags);
 	if (list_empty(&clone_queue.head)) {
-		spin_unlock(&clone_queue.lock);
+		spin_unlock_irqrestore(&clone_queue.lock, flags);
 		return NULL;
 	}
 
@@ -106,7 +108,7 @@ static inline struct clone_event *clone_shift(void)
 		clone_queue.len -= 1;
 		list_del_init(&clone_event->list);
 	}
-	spin_unlock(&clone_queue.lock);
+	spin_unlock_irqrestore(&clone_queue.lock, flags);
 
 	return clone_event;
 }
