@@ -14,6 +14,7 @@
 #include <linux/mm.h>
 #include <linux/proc_fs.h>
 
+#include "ktfutce.h"
 #include <asm/cacheflush.h>
 #include <linux/pagemap.h>
 
@@ -247,6 +248,8 @@ long _cb_pre_clone(long id, long flags)
 	return 0;
 }
 
+// We should really just allocate log and tracking data
+// and have kthread fill in all the data there.
 void _cb_post_clone(long id, long flags, long pid)
 {
 	struct CB_EVENT *event;
@@ -269,9 +272,10 @@ void _cb_post_clone(long id, long flags, long pid)
 	//
 	// This is a valid file, allocate an event
 	//
-	event = logger_alloc_event(CB_EVENT_TYPE_PROCESS_START, NULL);
+	event = logger_alloc_event_atomic(CB_EVENT_TYPE_PROCESS_START, NULL);
 	if (event) {
 		struct ProcessTracking *procp;
+		int			ret;
 
 		//
 		// Populate the event
@@ -296,19 +300,17 @@ void _cb_post_clone(long id, long flags, long pid)
 			event->processStart.inode = get_ino_from_task(current);
 		}
 
-		memset(event->processStart.cmdLine.v, 0,
-		       sizeof(event->processStart.cmdLine.v));
-
 		//
 		// Queue it to be sent to usermode
 		//
-
-		PR_DEBUG("process fork path=%s p=%d c=%ld u=%d forked a child",
-			 event->processStart.path, ppid, pid, uid);
 		process_tracking_insert_process(pid, pid, ppid, uid, euid,
 						CB_PROCESS_START_BY_FORK, NULL,
 						event, true);
-		logger_submit_event(event);
+		ret = ktfutce_add_pid(pid, event, GFP_ATOMIC);
+		if (ret < 0) {
+			logger_free_event_on_error(event);
+			process_tracking_remove_process(pid);
+		}
 	}
 
 CATCH_DEFAULT:
