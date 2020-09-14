@@ -131,6 +131,7 @@ struct HashTbl *hashtbl_init_generic(uint64_t numberOfBuckets,
 	tbl_storage_p = vmalloc(tableSize);
 
 	if (!tbl_storage_p) {
+		kfree(hashTblp);
 		HASHTBL_PRINT("Failed to allocate %luB at %s:%d.", tableSize,
 			      __FUNCTION__, __LINE__);
 		return NULL;
@@ -156,7 +157,8 @@ struct HashTbl *hashtbl_init_generic(uint64_t numberOfBuckets,
 	hashTblp->node_offset	  = node_offset;
 	hashTblp->hash_cache	  = NULL;
 	hashTblp->base_size	  = tableSize + sizeof(*hashTblp);
-	strncpy((char *)hashTblp->name, hashtble_name, sizeof(hashTblp->name));
+	strncpy((char *)hashTblp->name, hashtble_name,
+		sizeof(hashTblp->name) - 1);
 	if (!debug) {
 		// Make hash more random
 		get_random_bytes(&hashTblp->secret, sizeof(hashTblp->secret));
@@ -179,7 +181,7 @@ struct HashTbl *hashtbl_init_generic(uint64_t numberOfBuckets,
 			hashTblp->tablePtr = NULL;
 			kfree(hashTblp);
 			hashTblp = NULL;
-			return 0;
+			return NULL;
 		}
 	}
 
@@ -252,6 +254,8 @@ void hashtbl_for_each_generic(struct HashTbl *		  hashTblp,
 	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		return;
 	}
 
@@ -336,6 +340,8 @@ int hashtbl_add_generic(struct HashTbl *hashTblp, void *datap)
 	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		return -1;
 	}
 
@@ -368,6 +374,8 @@ void *hashtbl_get_generic(struct HashTbl *hashTblp, void *key)
 	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		goto ng_exit;
 	}
 
@@ -402,6 +410,8 @@ void *hashtbl_del_by_key_generic(struct HashTbl *hashTblp, void *key)
 	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		goto ndbk_exit;
 	}
 
@@ -444,6 +454,8 @@ int hashtbl_add_safe_generic(struct HashTbl *hashTblp, void *datap)
 	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		return -1;
 	}
 
@@ -483,6 +495,8 @@ bool hashtbl_getlocked_bucket(struct HashTbl *hashTblp, void *key, void **datap,
 		return false;
 	}
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		return false;
 	}
 
@@ -523,6 +537,8 @@ void hashtbl_del_generic(struct HashTbl *hashTblp, void *datap)
 		return;
 	}
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		return;
 	}
 
@@ -551,6 +567,8 @@ void *hashtbl_alloc_generic(struct HashTbl *hashTblp, int alloc_type)
 	}
 
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		return NULL;
 	}
 
@@ -574,6 +592,8 @@ void hashtbl_free_generic(struct HashTbl *hashTblp, void *datap)
 		return;
 	}
 	if (atomic64_read(&(hashTblp->tableShutdown)) == 1) {
+		HASHTBL_PRINT("Shutting Down: %s Blocking: %s\n",
+			      hashTblp->name, __func__);
 		return;
 	}
 	if (hashTblp->hash_cache) {
