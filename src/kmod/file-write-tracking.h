@@ -41,3 +41,5 @@ bool set_file_entry_data(struct file *file, pid_t *last_tgid,
 bool get_file_entry_data(struct file *file, pid_t *last_tgid,
 			 struct file_type_state *state,
 			 struct file_write_path *path);
+bool update_tgid_entry_data(struct file *file, pid_t last_tgid,
+			    struct file_type_state *state, char *path);

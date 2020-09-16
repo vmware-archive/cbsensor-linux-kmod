@@ -4,6 +4,7 @@
  */
 #define DS_MYSUBSYS DS_FILE
 #include "file-write-tracking.h"
+#include "file-write-cache.h"
 #include "hash-table-generic.h"
 #include "priv.h"
 
@@ -20,6 +21,7 @@ bool file_write_table_init(void)
 	if (!file_write_table) {
 		return false;
 	}
+	fwc_register();
 	return true;
 }
 
@@ -28,6 +30,7 @@ void file_write_table_shutdown(void)
 	if (file_write_table) {
 		hashtbl_shutdown_generic(file_write_table);
 		file_write_table = NULL;
+		fwc_shutdown();
 	}
 }
 
@@ -131,47 +134,28 @@ out_free_entry:
 // Common for forked or execs reusing file descriptors.
 bool update_file_entry(struct file *file, pid_t tgid)
 {
-	bool			 found;
-	struct file_write_entry *entry	    = NULL;
-	struct CB_EVENT *	 event	    = NULL;
-	bool			 update_ret = false;
-	bool			 ret	    = false;
+	bool		       found;
+	struct CB_EVENT *      event = NULL;
+	struct file_type_state state;
 
-	entry = hashtbl_alloc_generic(file_write_table, GFP_KERNEL);
-	if (!entry) {
-		goto out_free;
-	}
-
-	found = get_file_entry_data(file, &entry->last_tgid, &entry->state,
-				    &entry->path);
-	if (!found) {
-		goto out_free;
-	}
-	// Make sure we still need to update it
-	if (entry->last_tgid != tgid) {
-		update_ret = set_file_entry_data(file, &tgid, NULL, NULL);
-		// File Handle Was Already Closed Before We Could Create Entry
-		if (!update_ret) {
-			goto out_free;
-		}
-	}
-
-	event = logger_alloc_event(CB_EVENT_TYPE_FILE_WRITE, current);
+	event = logger_alloc_event_notask(CB_EVENT_TYPE_FILE_WRITE, tgid,
+					  GFP_KERNEL);
 	if (!event) {
-		goto out_free;
+		return false;
 	}
 
-	event->fileGeneric.file_type = entry->state.fileType;
-	memcpy(event->fileGeneric.path, entry->path.buf, PATH_MAX);
+	// Updates last_tgid and fills in filepath for log event
+	found = update_tgid_entry_data(file, tgid, &state,
+				       event->fileGeneric.path);
+	// If not found or tgid changed on us and matches.
+	if (!found) {
+		logger_free_event_on_error(event);
+		return false;
+	}
+
+	event->fileGeneric.file_type = state.fileType;
 	logger_submit_event(event);
-	ret = true;
-
-out_free:
-	if (entry) {
-		hashtbl_free_generic(file_write_table, entry);
-		entry = NULL;
-	}
-	return ret;
+	return true;
 }
 
 // No need for getting a safe copy
@@ -282,6 +266,46 @@ bool get_file_entry_data(struct file *file, pid_t *last_tgid,
 			}
 			if (path) {
 				memcpy(path, &entry->path, sizeof(*path));
+			}
+		}
+		if (bkt) {
+			hashtbl_unlock_bucket(bkt, flags);
+		}
+	}
+	return found;
+}
+
+bool update_tgid_entry_data(struct file *file, pid_t last_tgid,
+			    struct file_type_state *state, char *path)
+{
+	bool			 found;
+	struct hashtbl_bkt *	 bkt   = NULL;
+	unsigned long		 flags = 0;
+	struct file_write_entry *entry = NULL;
+	struct file_write_key	 key   = { .file = file };
+
+	if (!file || !last_tgid || (!state && !path)) {
+		return false;
+	}
+
+	// lock bucket
+	found = hashtbl_getlocked_bucket(file_write_table, &key,
+					 (void **)&entry, &bkt, &flags);
+	if (found) {
+		if (entry) {
+			// If we match someone else already changed it
+			// preventing a racing duplicate
+			if (entry->last_tgid == last_tgid) {
+				found = false;
+			} else {
+				entry->last_tgid = last_tgid;
+			}
+			// Copy State and Filepath Back
+			if (state) {
+				memcpy(state, &entry->state, sizeof(*state));
+			}
+			if (path) {
+				memcpy(path, entry->path.buf, PATH_MAX);
 			}
 		}
 		if (bkt) {

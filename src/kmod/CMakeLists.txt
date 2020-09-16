@@ -56,6 +56,7 @@ cbsensor-objs := drvmain.o \
                  module-hooks.o \
                  test-logging.o \
                  ktfutce.o \
+                 file-write-cache.o \
 
 CC=${CMAKE_C_COMPILER}")
 
@@ -68,6 +69,7 @@ add_custom_command(OUTPUT ${DRIVER_FILE}
             drvmain.c
             file-helper.c
             file-hooks.c
+            file-write-cache.c
             file-write-tracking.c
             file-types.c
             fops-comm.c
