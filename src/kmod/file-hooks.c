@@ -5,6 +5,7 @@
 
 #define DS_MYSUBSYS (DS_FILE | DS_HOOK)
 #include "file-types.h"
+#include "file-write-cache.h"
 #include "file-write-tracking.h"
 #include "priv.h"
 #include "process-tracking.h"
@@ -171,7 +172,6 @@ out:
 	return sb;
 }
 
-#if 0
 static dev_t get_dev_from_file(struct file *filep)
 {
 	dev_t		    dev = 0;
@@ -182,7 +182,6 @@ static dev_t get_dev_from_file(struct file *filep)
 	}
 	return dev;
 }
-#endif
 
 static inline bool __is_special_filesystem(struct super_block *sb)
 {
@@ -675,16 +674,20 @@ CATCH_DEFAULT:
 
 static void do_file_write_event(struct file *file)
 {
+	ino_t	      ino;
+	dev_t	      dev;
+	u64	      time;
 	bool	      found;
 	struct inode *inode;
 	pid_t	      pid	= getpid(current);
 	pid_t	      last_tgid = 0;
+	int	      cached_ret;
 
 	if (cbIngoreProcess(pid)) {
 		return;
 	}
 
-	if (!should_log(CB_EVENT_TYPE_FILE_CREATE)) {
+	if (!should_log(CB_EVENT_TYPE_FILE_WRITE)) {
 		return;
 	}
 
@@ -700,6 +703,16 @@ static void do_file_write_event(struct file *file)
 
 	// Special file systems don't need to create events
 	if (may_skip_file_event_for_special_fs(file)) {
+		return;
+	}
+
+	// Check File Write Cache
+	dev = get_dev_from_file(file);
+	ino = inode->i_ino;
+	// seconds since boot should be unique enough
+	time	   = current->start_time.tv_sec;
+	cached_ret = fwc_entry_exists(pid, ino, dev, time, GFP_KERNEL);
+	if (cached_ret == 0) {
 		return;
 	}
 
