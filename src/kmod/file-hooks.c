@@ -497,9 +497,9 @@ long (*cb_orig_sys_write)(unsigned int fd, const char __user *buf,
 asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 			     size_t count)
 {
-	long	      ret;
-	struct inode *inode;
-	struct file * file = NULL;
+	long		       ret;
+	struct inode *	       inode;
+	struct file *	       file = NULL;
 	loff_t		       pre_write_pos;
 	loff_t		       post_write_pos;
 	enum CB_FILE_TYPE      fileType = filetypeUnknown;
