@@ -4,7 +4,7 @@
  */
 
 #include "cb-isolation.h"
-#include "file-process-tracking.h"
+#include "file-write-tracking.h"
 #include "ktfutce.h"
 #include "network-tracking.h"
 #include "priv.h"
@@ -86,7 +86,7 @@ static int __init cbsensor_init(void)
 	TRY_STEP(NET_IS, logger_initialize());
 	ktfutce_register();
 	TRY_STEP(TASK, netfilter_initialize(g_enableHooks));
-	TRY_STEP(NET_FIL, file_process_tracking_init());
+	TRY_STEP(NET_FIL, file_write_table_init());
 	TRY_STEP(FILE_PROC, lsm_initialize(g_enableHooks));
 	TRY_STEP(LSM, syscall_initialize(g_enableHooks));
 	TRY_STEP(SYSCALL, cb_proc_initialize());
@@ -102,7 +102,7 @@ CATCH_SYSCALL:
 CATCH_LSM:
 	lsm_shutdown();
 CATCH_FILE_PROC:
-	file_process_tracking_shutdown();
+	file_write_table_shutdown();
 CATCH_NET_FIL:
 	netfilter_cleanup(g_enableHooks);
 CATCH_TASK:
@@ -159,7 +159,7 @@ static void __exit cbsensor_cleanup(void)
 		ssleep(5);
 	}
 
-	file_process_tracking_shutdown();
+	file_write_table_shutdown();
 	logger_shutdown();
 	ssleep(2); // @@TODO: we have to be sure we're not in a hook. need two
 		   // phase driver. very tricky

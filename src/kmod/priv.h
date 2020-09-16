@@ -323,7 +323,6 @@ extern char *dentry_to_path(struct dentry *dentry, char *buf);
 extern struct inode *get_inode_from_file(struct file *file);
 extern struct inode *get_inode_from_dentry(struct dentry *dentry);
 extern bool	     is_interesting_file(umode_t mode);
-extern bool	     is_excluded_file(struct inode *inode);
 extern int	     isSpecialFile(char *pathname, int len);
 
 //------------------------------------
