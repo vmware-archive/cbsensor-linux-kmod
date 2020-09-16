@@ -500,7 +500,6 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 	long	      ret;
 	struct inode *inode;
 	struct file * file = NULL;
-	// dev_t               dev;
 	loff_t		       pre_write_pos;
 	loff_t		       post_write_pos;
 	enum CB_FILE_TYPE      fileType = filetypeUnknown;
@@ -543,7 +542,6 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 		goto CATCH_DEFAULT;
 	}
 
-	// dev = get_dev_from_file(file);
 	last_tgid = 0;
 	memset(&state, 0, sizeof(state));
 	found_entry = get_file_entry_data(file, &last_tgid, &state, NULL);
