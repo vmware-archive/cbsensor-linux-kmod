@@ -166,8 +166,7 @@ int fwc_entry_exists(pid_t tgid, ino_t inode, dev_t dev, u64 time, gfp_t mode)
 		old = list_entry(bkt->list.prev, struct fwc_entry, list);
 		list_del_init(&old->list);
 		list_add(&entry->list, &bkt->list);
-		printk(KERN_INFO "%s: Evicted oldest entry: pid: %d\n",
-		       __func__, old->key.tgid);
+
 		kfree(old);
 	} else {
 		list_add(&entry->list, &bkt->list);
