@@ -25,7 +25,7 @@ struct file_write_key {
 struct file_write_entry {
 	struct HashTableNode   link;
 	struct file_write_key  key;
-	u32		       last_tgid;
+	pid_t		       last_tgid;
 	struct file_type_state state;
 	struct file_write_path path;
 };
