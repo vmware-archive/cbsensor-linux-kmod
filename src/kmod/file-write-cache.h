@@ -6,6 +6,6 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 
-int  fwc_register(void);
+int fwc_register(void);
 void fwc_shutdown(void);
-int  fwc_entry_exists(pid_t tgid, ino_t inode, dev_t dev, u64 time, gfp_t mode);
+int fwc_entry_exists(pid_t tgid, ino_t inode, dev_t dev, u64 time, gfp_t mode);

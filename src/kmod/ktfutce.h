@@ -14,7 +14,7 @@
 // wait queue. By the time this thread wakes the new task
 // will highly likely be available.
 //
-int  ktfutce_register(void);
+int ktfutce_register(void);
 void ktfutce_shutdown(void);
 
 int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode);

@@ -23,8 +23,8 @@
 
 typedef struct special_file_t_ {
 	char *name;
-	int   len;
-	int   enabled;
+	int len;
+	int enabled;
 
 } special_file_t;
 
@@ -174,8 +174,8 @@ out:
 
 static dev_t get_dev_from_file(struct file *filep)
 {
-	dev_t		    dev = 0;
-	struct super_block *sb	= _sb_from_file(filep);
+	dev_t dev = 0;
+	struct super_block *sb = _sb_from_file(filep);
 
 	if (sb) {
 		dev = sb->s_dev;
@@ -301,8 +301,10 @@ bool may_skip_unsafe_vfs_calls(struct file *filep)
 struct inode *get_inode_from_dentry(struct dentry *dentry)
 {
 	// Skip if dentry is null
-	if (!dentry) return NULL;
-	if (!dentry->d_inode) return NULL;
+	if (!dentry)
+		return NULL;
+	if (!dentry->d_inode)
+		return NULL;
 
 	// dig out inode
 	return dentry->d_inode;
@@ -310,31 +312,34 @@ struct inode *get_inode_from_dentry(struct dentry *dentry)
 
 struct inode *get_inode_from_file(struct file *file)
 {
-	if (!file) return NULL;
+	if (!file)
+		return NULL;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 	// The cached inode may be NULL, but the calling code will handle that
 	return file->f_inode;
 #else
 	// Skip if dentry or inode is null
-	if (!file->f_path.dentry) return NULL;
-	if (!file->f_path.dentry->d_inode) return NULL;
+	if (!file->f_path.dentry)
+		return NULL;
+	if (!file->f_path.dentry->d_inode)
+		return NULL;
 
 	// dig out inode
 	return file->f_path.dentry->d_inode;
 #endif
 }
 
-static void logger_on_generic_file_event(struct dentry *    dentry,
+static void logger_on_generic_file_event(struct dentry *dentry,
 					 enum CB_EVENT_TYPE eventType,
-					 int		    param)
+					 int param)
 {
 	struct CB_EVENT *event;
-	char *		 pathname;
-	uint64_t	 pathsz;
-	struct inode *	 inodep = NULL;
-	uint64_t	 ino	= 0;
-	pid_t		 pid	= getpid(current);
+	char *pathname;
+	uint64_t pathsz;
+	struct inode *inodep = NULL;
+	uint64_t ino = 0;
+	pid_t pid = getpid(current);
 
 	if (cbIngoreProcess(pid)) {
 		return;
@@ -452,7 +457,7 @@ CATCH_DEFAULT:
 int on_file_permission(struct file *file, int mask)
 {
 	bool write = (mask & MAY_WRITE) == MAY_WRITE;
-	int  xcode = 0;
+	int xcode = 0;
 	MODULE_GET();
 
 	xcode = g_original_ops_ptr->file_permission(file, mask);
@@ -496,17 +501,17 @@ long (*cb_orig_sys_write)(unsigned int fd, const char __user *buf,
 asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 			     size_t count)
 {
-	long		       ret;
-	struct inode *	       inode;
-	struct file *	       file = NULL;
-	loff_t		       pre_write_pos;
-	loff_t		       post_write_pos;
-	enum CB_FILE_TYPE      fileType = filetypeUnknown;
-	char		       buffer[MAX_FILE_BYTES_TO_DETERMINE_TYPE];
+	long ret;
+	struct inode *inode;
+	struct file *file = NULL;
+	loff_t pre_write_pos;
+	loff_t post_write_pos;
+	enum CB_FILE_TYPE fileType = filetypeUnknown;
+	char buffer[MAX_FILE_BYTES_TO_DETERMINE_TYPE];
 	struct file_type_state state;
-	pid_t		       last_tgid;
-	bool		       found_entry;
-	bool		       commit_change = false;
+	pid_t last_tgid;
+	bool found_entry;
+	bool commit_change = false;
 
 	MODULE_GET();
 
@@ -533,7 +538,7 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 	}
 
 	post_write_pos = file->f_pos;
-	pre_write_pos  = post_write_pos - ret;
+	pre_write_pos = post_write_pos - ret;
 
 	// We should limit how far we want to potentially vfs_llseek.
 	// Being more than a few pages away seems far enough to do nothing
@@ -570,7 +575,7 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 		if (state.fileType != fileType || !state.didReadType) {
 			commit_change = true;
 		}
-		state.fileType	  = fileType;
+		state.fileType = fileType;
 		state.didReadType = true;
 		goto CATCH_DEFAULT;
 	}
@@ -589,7 +594,7 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 	// We do not want to perform any VFS calls on this file
 	if (may_skip_unsafe_vfs_calls(file)) {
 		state.try_vfs_read = false;
-		commit_change	   = true;
+		commit_change = true;
 		goto CATCH_DEFAULT;
 	}
 
@@ -606,11 +611,11 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 	// Attempt get beginning of file contents via VFS
 	// There's been enough checks on file position and boundaries.
 	{
-		loff_t	     pos  = 0;
-		ssize_t	     size = 0;
+		loff_t pos = 0;
+		ssize_t size = 0;
 		mm_segment_t oldfs;
-		fmode_t	     mode;
-		loff_t	     llseek_ret;
+		fmode_t mode;
+		loff_t llseek_ret;
 
 		// Save the real mode and force the ability to read in case the
 		// file was opened write only
@@ -623,7 +628,7 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 		llseek_ret = vfs_llseek(file, 0, SEEK_SET);
 		if (llseek_ret != 0) {
 			state.try_vfs_read = false;
-			commit_change	   = true;
+			commit_change = true;
 			// Restore the real file mode
 			file->f_mode = mode;
 			goto CATCH_DEFAULT;
@@ -656,7 +661,7 @@ asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 			determine_file_type(buffer, size, &fileType, true);
 			// PR_DEBUG("Detected file %s of type %s",
 			// fileProcess->path, file_type_str(fileType));
-			state.fileType	  = fileType;
+			state.fileType = fileType;
 			state.didReadType = true;
 		}
 	}
@@ -674,14 +679,14 @@ CATCH_DEFAULT:
 
 static void do_file_write_event(struct file *file)
 {
-	ino_t	      ino;
-	dev_t	      dev;
-	u64	      time;
-	bool	      found;
+	ino_t ino;
+	dev_t dev;
+	u64 time;
+	bool found;
 	struct inode *inode;
-	pid_t	      pid	= getpid(current);
-	pid_t	      last_tgid = 0;
-	int	      cached_ret;
+	pid_t pid = getpid(current);
+	pid_t last_tgid = 0;
+	int cached_ret;
 
 	if (cbIngoreProcess(pid)) {
 		return;
@@ -710,7 +715,7 @@ static void do_file_write_event(struct file *file)
 	dev = get_dev_from_file(file);
 	ino = inode->i_ino;
 	// seconds since boot should be unique enough
-	time	   = current->start_time.tv_sec;
+	time = current->start_time.tv_sec;
 	cached_ret = fwc_entry_exists(pid, ino, dev, time, GFP_KERNEL);
 	if (cached_ret == 0) {
 		return;

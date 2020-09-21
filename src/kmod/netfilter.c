@@ -53,10 +53,10 @@ static unsigned int hook_func_local_out(
 #endif
 )
 {
-	unsigned int   xcode = NF_ACCEPT;
-	void *	       daddr = NULL;
-	int	       family;
-	uint8_t	       protocol;
+	unsigned int xcode = NF_ACCEPT;
+	void *daddr = NULL;
+	int family;
+	uint8_t protocol;
 	struct udphdr *udp_header;
 
 	struct CB_ISOLATION_INTERCEPT_RESULT isolation_result;
@@ -74,14 +74,14 @@ static unsigned int hook_func_local_out(
 		TRY(ip_header);
 
 		protocol = ip_header->protocol;
-		daddr	 = &ip_header->daddr;
+		daddr = &ip_header->daddr;
 	} else {
 		struct ipv6hdr *ip_header = ipv6_hdr(skb);
-		int		ptr	  = (u8 *)(ip_header + 1) - skb->data;
+		int ptr = (u8 *)(ip_header + 1) - skb->data;
 
 		TRY(ip_header);
 		protocol = ip_header->nexthdr;
-		daddr	 = &ip_header->daddr.s6_addr32[0];
+		daddr = &ip_header->daddr.s6_addr32[0];
 
 		// Use the ipv6_skip_exthdr function to skip past any extended
 		// headers that may be present. We dont actually care about the
@@ -118,19 +118,19 @@ int web_proxy_request_check(struct sk_buff *skb)
 	char tmp[10];
 	char url[CB_PROXY_SERVER_MAX_LEN];
 
-	const char *HTTP_METHODS[]	= { "GET", "PUT", "POST", "DELETE",
-					    "CONNECT" };
-	const int   HTTP_METHODS_LEN[]	= { 3, 3, 4, 6, 7 };
-	const int   HTTP_METHOD_MAX_LEN = 7;
-	const char *HTTP_VERSION[]	= { "HTTP/1.1", "HTTP/1.0" };
-	const int   HTTP_VERSION_LEN	= 8;
-	int	    family;
+	const char *HTTP_METHODS[] = { "GET", "PUT", "POST", "DELETE",
+				       "CONNECT" };
+	const int HTTP_METHODS_LEN[] = { 3, 3, 4, 6, 7 };
+	const int HTTP_METHOD_MAX_LEN = 7;
+	const char *HTTP_VERSION[] = { "HTTP/1.1", "HTTP/1.0" };
+	const int HTTP_VERSION_LEN = 8;
+	int family;
 
-	int		 i;
-	int		 space_offset;
-	int		 url_len;
-	int		 payload_offset;
-	struct tcphdr *	 tcp_header;
+	int i;
+	int space_offset;
+	int url_len;
+	int payload_offset;
+	struct tcphdr *tcp_header;
 	struct CB_EVENT *event;
 
 	TRY(skb);
@@ -198,7 +198,7 @@ int web_proxy_request_check(struct sk_buff *skb)
 			// actual_port will be obtained at cbdaemon based on
 			// actual_server url.
 
-			event->netConnect.localAddr.sa_addr.sa_family  = family;
+			event->netConnect.localAddr.sa_addr.sa_family = family;
 			event->netConnect.remoteAddr.sa_addr.sa_family = family;
 
 			tcp_header = (struct tcphdr *)skb_transport_header(skb);
@@ -248,9 +248,9 @@ int find_char_offset(const struct sk_buff *skb, int offset, char target)
 {
 	char *ptr;
 	char *frag_addr;
-	int   frag_len;
-	int   current_offset;
-	int   i;
+	int frag_len;
+	int current_offset;
+	int i;
 
 	// There is data inside skb, so search the remaining data before search
 	// fragments.
@@ -269,7 +269,7 @@ int find_char_offset(const struct sk_buff *skb, int offset, char target)
 
 	for (i = skb_shinfo(skb)->nr_frags - 1; i >= 0; i--) {
 		frag_addr = skb_frag_address_safe(&skb_shinfo(skb)->frags[i]);
-		frag_len  = skb_frag_size(&skb_shinfo(skb)->frags[i]);
+		frag_len = skb_frag_size(&skb_shinfo(skb)->frags[i]);
 		for (ptr = frag_addr; ptr <= frag_addr + frag_len; ptr++) {
 			if (current_offset >= offset && *ptr == target) {
 				return current_offset;
@@ -282,14 +282,14 @@ int find_char_offset(const struct sk_buff *skb, int offset, char target)
 
 bool netfilter_initialize(uint32_t enableHooks)
 {
-	nfho_local_out[0].hook	   = hook_func_local_out;
-	nfho_local_out[0].hooknum  = NF_INET_LOCAL_OUT;
-	nfho_local_out[0].pf	   = PF_INET;
+	nfho_local_out[0].hook = hook_func_local_out;
+	nfho_local_out[0].hooknum = NF_INET_LOCAL_OUT;
+	nfho_local_out[0].pf = PF_INET;
 	nfho_local_out[0].priority = NF_IP_PRI_FIRST;
 
-	nfho_local_out[1].hook	   = hook_func_local_out;
-	nfho_local_out[1].hooknum  = NF_INET_LOCAL_OUT;
-	nfho_local_out[1].pf	   = PF_INET6;
+	nfho_local_out[1].hook = hook_func_local_out;
+	nfho_local_out[1].hooknum = NF_INET_LOCAL_OUT;
+	nfho_local_out[1].pf = PF_INET6;
 	nfho_local_out[1].priority = NF_IP_PRI_FIRST;
 
 	if (enableHooks & CB__NF_local_out)

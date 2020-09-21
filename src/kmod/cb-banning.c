@@ -20,26 +20,26 @@ struct BL_TBL_KEY {
 
 struct DenylistEntry {
 	struct HashTableNode link;
-	struct BL_TBL_KEY    key;
-	uint64_t	     hash;
-	uint64_t	     inode;
+	struct BL_TBL_KEY key;
+	uint64_t hash;
+	uint64_t inode;
 };
 
 #define PROTECTION_DISABLED 0
 #define PROTECTION_ENABLED 1
 #define CB_BANNING_CACHE_OBJ_SZ 64
 
-struct HashTbl *g_banning_table			= NULL;
-int64_t		g_banned_process_by_inode_count = 0;
+struct HashTbl *g_banning_table = NULL;
+int64_t g_banned_process_by_inode_count = 0;
 uint32_t g_protectionModeEnabled = PROTECTION_ENABLED; // Default to enabled
 
 void cbKillRunningBannedProcessByInode(uint64_t ino);
 
 bool cbBanningInitialize(void)
 {
-	g_protectionModeEnabled		= PROTECTION_ENABLED;
+	g_protectionModeEnabled = PROTECTION_ENABLED;
 	g_banned_process_by_inode_count = 0;
-	g_banning_table			= hashtbl_init_generic(
+	g_banning_table = hashtbl_init_generic(
 		8192, sizeof(struct DenylistEntry), CB_BANNING_CACHE_OBJ_SZ,
 		"cb_banning_cache", sizeof(struct BL_TBL_KEY),
 		offsetof(struct DenylistEntry, key),
@@ -76,8 +76,8 @@ void cbSetProtectionState(uint32_t new_state)
 bool cbSetBannedProcessInode(uint64_t ino)
 {
 	struct DenylistEntry *bep;
-	bool		      retval = true;
-	int64_t		      i =
+	bool retval = true;
+	int64_t i =
 		atomic64_read((atomic64_t *)&g_banned_process_by_inode_count);
 
 	PR_DEBUG("Received ino=%llu inode count=%lld", ino, i);
@@ -90,8 +90,8 @@ bool cbSetBannedProcessInode(uint64_t ino)
 	}
 
 	bep->key.inode = ino;
-	bep->hash      = 0;
-	bep->inode     = ino;
+	bep->hash = 0;
+	bep->inode = ino;
 
 	if (hashtbl_add_generic(g_banning_table, bep) < 0) {
 		hashtbl_free_generic(g_banning_table, bep);
@@ -113,7 +113,7 @@ inline bool cbClearBannedProcessInode(uint64_t ino)
 	int64_t count =
 		atomic64_read((atomic64_t *)&g_banned_process_by_inode_count);
 	struct DenylistEntry *bep;
-	struct BL_TBL_KEY     key = { ino };
+	struct BL_TBL_KEY key = { ino };
 
 	if (count == 0 || ino == 0) {
 		return false;
@@ -147,9 +147,9 @@ void cbClearAllBans(void)
 
 bool cbKillBannedProcessByInode(uint64_t ino)
 {
-	int64_t		      count;
+	int64_t count;
 	struct DenylistEntry *bep;
-	struct BL_TBL_KEY     key = { ino };
+	struct BL_TBL_KEY key = { ino };
 
 	if (atomic_read((atomic_t *)&g_protectionModeEnabled) ==
 	    PROTECTION_DISABLED) {
@@ -181,14 +181,14 @@ kbpbi_exit:
 
 void cbKillRunningBannedProcessByInode(uint64_t ino)
 {
-	pid_t			      pid;
-	struct siginfo		      info;
-	int			      ret;
-	struct list_head *	      pos, *safe_del;
-	struct ProcessTracking *      procp = NULL;
-	struct CB_EVENT *	      event;
+	pid_t pid;
+	struct siginfo info;
+	int ret;
+	struct list_head *pos, *safe_del;
+	struct ProcessTracking *procp = NULL;
+	struct CB_EVENT *event;
 	struct RunningBannedInodeInfo sRunningInodesToBan;
-	struct processes_to_ban *     temp = NULL;
+	struct processes_to_ban *temp = NULL;
 
 	if (atomic_read((atomic_t *)&g_protectionModeEnabled) ==
 	    PROTECTION_DISABLED) {
@@ -200,7 +200,7 @@ void cbKillRunningBannedProcessByInode(uint64_t ino)
 
 	memset(&info, 0, sizeof(struct siginfo));
 	info.si_signo = SIGKILL;
-	info.si_code  = 0;
+	info.si_code = 0;
 	info.si_errno = 1234;
 
 	memset(&sRunningInodesToBan, 0, sizeof(struct RunningBannedInodeInfo));
@@ -220,7 +220,7 @@ void cbKillRunningBannedProcessByInode(uint64_t ino)
 				 *)(list_entry(pos, struct processes_to_ban,
 					       list)
 					    ->procp);
-		pid   = procp->pt_key.pid;
+		pid = procp->pt_key.pid;
 
 		//
 		// allocate an event
@@ -235,7 +235,7 @@ void cbKillRunningBannedProcessByInode(uint64_t ino)
 
 			event->blockResponse.blockType =
 				ProcessTerminatedAfterStartup;
-			event->blockResponse.uid   = procp->uid;
+			event->blockResponse.uid = procp->uid;
 			event->blockResponse.inode = ino;
 
 			strncpy(event->blockResponse.path, procp->taskp->comm,

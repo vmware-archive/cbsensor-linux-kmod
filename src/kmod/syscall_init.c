@@ -31,7 +31,7 @@ extern long (*cb_orig_sys_recvmmsg)(int fd, struct mmsghdr __user *msg,
 				    struct timespec __user *timeout);
 
 extern asmlinkage long cb_sys_recvfrom(int fd, void __user *ubuf, size_t size,
-				       unsigned	       flags,
+				       unsigned flags,
 				       struct sockaddr __user *addr,
 				       int __user *addr_len);
 extern asmlinkage long cb_sys_recvmsg(int fd, struct msghdr __user *msg,
@@ -49,15 +49,15 @@ extern asmlinkage long cb_sys_write(unsigned int fd, const char __user *buf,
 
 // Kernel module hooks
 extern long (*cb_orig_sys_delete_module)(const char __user *name_user,
-					 unsigned int	    flags);
+					 unsigned int flags);
 
 extern asmlinkage long cb_sys_delete_module(const char __user *name_user,
-					    unsigned int       flags);
+					    unsigned int flags);
 
 extern uint32_t g_enableHooks;
 
 static unsigned long page_rw_set;
-static uint64_t	     page_rw_lock = 0;
+static uint64_t page_rw_lock = 0;
 
 static inline pte_t *lookup_pte(p_sys_call_table address)
 {
@@ -72,7 +72,8 @@ CATCH_DEFAULT:
 static inline bool set_page_state_rw(p_sys_call_table address)
 {
 	pte_t *pte = lookup_pte(address);
-	if (!pte) return false;
+	if (!pte)
+		return false;
 
 	cb_spinlock(&page_rw_lock);
 	page_rw_set = pte->pte & _PAGE_RW;
@@ -92,20 +93,21 @@ static inline void restore_page_state(p_sys_call_table address)
 	// If the page state was originally RO, restore it to RO.
 	// We don't just assign the original value back here in case some other
 	// bits were changed.
-	if (!page_rw_set) pte->pte &= ~_PAGE_RW;
+	if (!page_rw_set)
+		pte->pte &= ~_PAGE_RW;
 	cb_spinunlock(&page_rw_lock);
 }
 
 static void save_old_hooks(p_sys_call_table syscall_table)
 {
 	cb_orig_sys_delete_module = syscall_table[__NR_delete_module];
-	ORIG_SYSCALL_PTR(clone)	  = syscall_table[__NR_clone];
-	ORIG_SYSCALL_PTR(fork)	  = syscall_table[__NR_fork];
-	ORIG_SYSCALL_PTR(vfork)	  = syscall_table[__NR_vfork];
-	cb_orig_sys_recvfrom	  = syscall_table[__NR_recvfrom];
-	cb_orig_sys_recvmsg	  = syscall_table[__NR_recvmsg];
-	cb_orig_sys_recvmmsg	  = syscall_table[__NR_recvmmsg];
-	cb_orig_sys_write	  = syscall_table[__NR_write];
+	ORIG_SYSCALL_PTR(clone) = syscall_table[__NR_clone];
+	ORIG_SYSCALL_PTR(fork) = syscall_table[__NR_fork];
+	ORIG_SYSCALL_PTR(vfork) = syscall_table[__NR_vfork];
+	cb_orig_sys_recvfrom = syscall_table[__NR_recvfrom];
+	cb_orig_sys_recvmsg = syscall_table[__NR_recvmsg];
+	cb_orig_sys_recvmmsg = syscall_table[__NR_recvmmsg];
+	cb_orig_sys_write = syscall_table[__NR_write];
 }
 
 static bool set_new_hooks(p_sys_call_table syscall_table, uint32_t enableHooks)
@@ -155,7 +157,7 @@ static bool set_new_hooks(p_sys_call_table syscall_table, uint32_t enableHooks)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 static bool set_new_32bit_hooks(p_sys_call_table syscall_table,
-				uint32_t	 enableHooks)
+				uint32_t enableHooks)
 {
 	bool rval = false;
 
@@ -213,7 +215,7 @@ static void restore_hooks(p_sys_call_table syscall_table, uint32_t enableHooks)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 static void restore_32bit_hooks(p_sys_call_table syscall_table,
-				uint32_t	 enableHooks)
+				uint32_t enableHooks)
 {
 	// Disable CPU write protect, and restore the call table
 	get_cpu();
@@ -234,12 +236,13 @@ static void restore_32bit_hooks(p_sys_call_table syscall_table,
 
 bool syscall_initialize(uint32_t enableHooks)
 {
-	bool		 rval = false;
+	bool rval = false;
 	p_sys_call_table syscall_table;
 	cb_initspinlock(&page_rw_lock);
 
 	// If the hooks are not enabled, then no point in continuing.
-	if (!(enableHooks & 0xFF)) return true;
+	if (!(enableHooks & 0xFF))
+		return true;
 
 	// Find the syscall table addresses.
 	if (!g_resolvedSymbols.sys_call_table) {
@@ -273,7 +276,7 @@ CATCH_DEFAULT:
 
 bool syscall_hooks_changed(uint32_t enableHooks)
 {
-	bool		 changed = false;
+	bool changed = false;
 	p_sys_call_table syscall_table;
 
 	TRY_CB_RESOLVED(sys_call_table);
@@ -329,7 +332,7 @@ CATCH_DEFAULT:
 static void setSyscall(const char *buf, const char *name, uint32_t syscall,
 		       int nr, void *cb_call, void *krn_call, void **table)
 {
-	int   cpu;
+	int cpu;
 	void *call = NULL;
 	if (0 == strncmp("1", buf, sizeof(char))) {
 		PR_DEBUG("Adding %s", name);

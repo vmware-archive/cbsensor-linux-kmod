@@ -48,28 +48,28 @@ const char DRIVER_NAME[] = "cbsensor";
 #define MINOR_COUNT 1
 #define MSG_QUEUE_SIZE 8192 // Must be power of 2
 ssize_t KF_LEN = sizeof(struct CB_EVENT); // This needs to be sizeof(whatever we
-					  // store in kfifo)
+	// store in kfifo)
 
-int	     device_open(struct inode *, struct file *);
-int	     device_release(struct inode *, struct file *);
-ssize_t	     device_read(struct file *f, char __user *buf, size_t count,
-			 loff_t *offset);
+int device_open(struct inode *, struct file *);
+int device_release(struct inode *, struct file *);
+ssize_t device_read(struct file *f, char __user *buf, size_t count,
+		    loff_t *offset);
 unsigned int device_poll(struct file *, struct poll_table_struct *);
-static long  device_unlocked_ioctl(struct file *filep, unsigned int cmd,
-				   unsigned long arg);
+static long device_unlocked_ioctl(struct file *filep, unsigned int cmd,
+				  unsigned long arg);
 
 struct file_operations driver_fops = {
-	.owner		= THIS_MODULE,
-	.read		= device_read,
-	.poll		= device_poll,
-	.open		= device_open,
-	.release	= device_release,
+	.owner = THIS_MODULE,
+	.read = device_read,
+	.poll = device_poll,
+	.open = device_open,
+	.release = device_release,
 	.unlocked_ioctl = device_unlocked_ioctl,
 };
 
 // Our device special major number
 static dev_t g_maj_t = 0;
-struct cdev  cb_cdev;
+struct cdev cb_cdev;
 
 static DECLARE_KFIFO_PTR(msg_queue_pri0, struct CB_EVENT *);
 static DECLARE_KFIFO_PTR(msg_queue_pri1, struct CB_EVENT *);
@@ -94,7 +94,7 @@ struct CB_EVENT_STATS {
 	//  tx_dns
 	//  tx_proxy
 	//  tx_block
-	atomic64_t	stats[MAX_INTERVALS][NUM_STATS];
+	atomic64_t stats[MAX_INTERVALS][NUM_STATS];
 	struct timespec time[MAX_INTERVALS];
 
 	// These are live counters that rise and fall as events are generated.
@@ -163,7 +163,7 @@ struct CB_EVENT_STATS cb_event_stats;
 #define mem_kernel (cb_event_stats.stats[atomic_read(&current_stat)][15])
 #define mem_kernel_peak (cb_event_stats.stats[atomic_read(&current_stat)][16])
 
-bool	 have_reader = false;
+bool have_reader = false;
 uint64_t dev_spinlock;
 
 DECLARE_WAIT_QUEUE_HEAD(wq);
@@ -172,12 +172,12 @@ extern void free_event_cache(struct CB_EVENT *event);
 
 #define STAT_INTERVAL 15
 static struct delayed_work stats_work;
-static void		   stats_work_task(struct work_struct *work);
-static uint32_t		   g_stats_work_delay;
+static void stats_work_task(struct work_struct *work);
+static uint32_t g_stats_work_delay;
 
 bool user_comm_initialize(void)
 {
-	int    i;
+	int i;
 	size_t kernel_mem;
 
 	cb_initspinlock(&dev_spinlock);
@@ -230,7 +230,7 @@ CATCH_CDEV_INIT:
 bool user_devnode_init(void)
 {
 	const unsigned int MINOR_FIRST = 0;
-	int		   maj_no;
+	int maj_no;
 
 	// Allocate Major / Minor number of device special file
 	TRY_STEP_DO(
@@ -293,7 +293,7 @@ void user_comm_shutdown(void)
 int user_comm_send_event_atomic(struct CB_EVENT *msg)
 {
 	unsigned int enqueued = 0;
-	atomic64_t * tx_ready = NULL;
+	atomic64_t *tx_ready = NULL;
 	if (!have_reader) {
 		free_event_cache(msg);
 		return -1;
@@ -340,14 +340,14 @@ int user_comm_send_event(struct CB_EVENT *msg)
 ssize_t device_read(struct file *f, char __user *ubuf, size_t count,
 		    loff_t *offset)
 {
-	struct CB_EVENT *msg	  = NULL;
-	int		 rc	  = 0;
-	ssize_t		 len	  = 0;
-	atomic64_t *	 tx_ready = NULL;
-	uint64_t	 qlen_a;
-	uint64_t	 qlen_b;
-	uint64_t	 qlen_a_pct;
-	uint64_t	 qlen_b_pct;
+	struct CB_EVENT *msg = NULL;
+	int rc = 0;
+	ssize_t len = 0;
+	atomic64_t *tx_ready = NULL;
+	uint64_t qlen_a;
+	uint64_t qlen_b;
+	uint64_t qlen_a_pct;
+	uint64_t qlen_b_pct;
 
 	PR_DEBUG_RATELIMITED("start read");
 
@@ -378,16 +378,16 @@ ssize_t device_read(struct file *f, char __user *ubuf, size_t count,
 	// reduce some pressue by tweeking the priorities a bit.
 
 	if (qlen_a_pct >= 90 || // if utilization is at 90% for 'a', short
-				// circuit and handle it
+	    // circuit and handle it
 	    (qlen_a != 0 && qlen_b_pct < 90)) // otherwise, make sure we have an
-					      // event and process it if 'b' is
-					      // not critical
+	// event and process it if 'b' is
+	// not critical
 	{
 		tx_ready = &tx_ready_pri0;
-		rc	 = kfifo_get(&msg_queue_pri0, &msg);
+		rc = kfifo_get(&msg_queue_pri0, &msg);
 	} else {
 		tx_ready = &tx_ready_pri1;
-		rc	 = kfifo_get(&msg_queue_pri1, &msg);
+		rc = kfifo_get(&msg_queue_pri1, &msg);
 	}
 	cb_spinunlock(&dev_spinlock);
 
@@ -456,7 +456,7 @@ ssize_t device_read(struct file *f, char __user *ubuf, size_t count,
 		len = -ENXIO;
 	} else {
 		*offset = 0;
-		len	= KF_LEN;
+		len = KF_LEN;
 		PR_DEBUG_RATELIMITED("read=%ld qlen_a=%llu qlen_b=%llu", len,
 				     qlen_a, qlen_b);
 	}
@@ -517,7 +517,7 @@ static long device_unlocked_ioctl(struct file *filep, unsigned int cmd,
 				  unsigned long arg)
 {
 	unsigned long data = 0;
-	void *	      page = 0;
+	void *page = 0;
 
 	// Shift to avoid Linux IOW|IOR bits.
 	cmd >>= 2;
@@ -549,7 +549,7 @@ static long device_unlocked_ioctl(struct file *filep, unsigned int cmd,
 			return -ENOMEM;
 		}
 		data = dynControl.size;
-		arg  = dynControl.data;
+		arg = dynControl.data;
 	} else {
 		if (copy_from_user(&data, (void *)arg, sizeof(data))) {
 			PRINTK(KERN_ERR, "failed to copy arg");
@@ -595,8 +595,8 @@ static long device_unlocked_ioctl(struct file *filep, unsigned int cmd,
 	} break;
 
 	case CB_DRIVER_REQUEST_HEARTBEAT: {
-		struct CB_EVENT *   event = NULL;
-		struct task_struct *task  = current;
+		struct CB_EVENT *event = NULL;
+		struct task_struct *task = current;
 
 		struct CB_EVENT_HEARTBEAT heartbeat;
 		if (copy_from_user(&heartbeat, (void *)arg,
@@ -681,15 +681,15 @@ static long device_unlocked_ioctl(struct file *filep, unsigned int cmd,
 
 static void stats_work_task(struct work_struct *work)
 {
-	uint32_t curr	= atomic_read(&cb_event_stats.curr);
-	uint32_t next	= (curr + 1) % MAX_INTERVALS;
+	uint32_t curr = atomic_read(&cb_event_stats.curr);
+	uint32_t next = (curr + 1) % MAX_INTERVALS;
 	uint64_t ready0 = atomic64_read(&tx_ready_pri0);
 	uint64_t ready1 = atomic64_read(&tx_ready_pri1);
-	uint64_t prev0	= atomic64_read(&tx_ready_prev0);
-	uint64_t prev1	= atomic64_read(&tx_ready_prev1);
-	int	 i;
-	size_t	 kernel_mem;
-	size_t	 kernel_mem_peak;
+	uint64_t prev0 = atomic64_read(&tx_ready_prev0);
+	uint64_t prev1 = atomic64_read(&tx_ready_prev1);
+	int i;
+	size_t kernel_mem;
+	size_t kernel_mem_peak;
 
 	// I am not strictly speaking doing this operation atomicly.  This means
 	// there is a
@@ -719,7 +719,7 @@ static void stats_work_task(struct work_struct *work)
 	atomic_set(&current_stat, next);
 	atomic_inc(&valid_stats);
 	getnstimeofday(&cb_event_stats.time[next]);
-	kernel_mem	= hashtbl_get_memory();
+	kernel_mem = hashtbl_get_memory();
 	kernel_mem_peak = atomic64_read(&mem_kernel_peak);
 	atomic64_set(&mem_kernel, kernel_mem);
 	atomic64_set(&mem_kernel_peak,
@@ -736,14 +736,14 @@ int cb_proc_show_events_avg(struct seq_file *m, void *v)
 	// subtract 1 it will
 	//  still be a positive number.  The modulus math will clean it up
 	//  later.
-	uint32_t curr	= atomic_read(&cb_event_stats.curr) + MAX_INTERVALS;
-	uint32_t valid	= atomic_read(&cb_event_stats.validStats);
-	int32_t	 avg1_c = (valid > 4 ? 4 : valid);
-	int32_t	 avg2_c = (valid > 20 ? 20 : valid);
-	int32_t	 avg3_c = (valid > 60 ? 60 : valid);
-	int32_t	 avg1	= (curr - avg1_c) % MAX_INTERVALS;
-	int32_t	 avg2	= (curr - avg2_c) % MAX_INTERVALS;
-	int32_t	 avg3	= (curr - avg3_c) % MAX_INTERVALS;
+	uint32_t curr = atomic_read(&cb_event_stats.curr) + MAX_INTERVALS;
+	uint32_t valid = atomic_read(&cb_event_stats.validStats);
+	int32_t avg1_c = (valid > 4 ? 4 : valid);
+	int32_t avg2_c = (valid > 20 ? 20 : valid);
+	int32_t avg3_c = (valid > 60 ? 60 : valid);
+	int32_t avg1 = (curr - avg1_c) % MAX_INTERVALS;
+	int32_t avg2 = (curr - avg2_c) % MAX_INTERVALS;
+	int32_t avg3 = (curr - avg3_c) % MAX_INTERVALS;
 
 	int i;
 
@@ -794,7 +794,7 @@ int cb_proc_show_events_det(struct seq_file *m, void *v)
 	// subtract 1 it will
 	//  still be a positive number.  The modulus math will clean it up
 	//  later.
-	uint32_t curr  = atomic_read(&cb_event_stats.curr);
+	uint32_t curr = atomic_read(&cb_event_stats.curr);
 	uint32_t valid = min(atomic_read(&cb_event_stats.validStats),
 			     MAX_VALID_INTERVALS);
 	uint32_t start =
@@ -816,7 +816,7 @@ int cb_proc_show_events_det(struct seq_file *m, void *v)
 	seq_printf(m, "\n");
 
 	for (i = 0; i < valid; ++i) {
-		uint64_t left  = (start + i - 1) % MAX_INTERVALS;
+		uint64_t left = (start + i - 1) % MAX_INTERVALS;
 		uint64_t right = (start + i) % MAX_INTERVALS;
 
 		seq_printf(m, " %19lld |",
@@ -891,7 +891,7 @@ int cb_proc_current_memory_det(struct seq_file *m, void *v)
 	// subtract 1 it will
 	//  still be a positive number.  The modulus math will clean it up
 	//  later.
-	uint32_t curr  = atomic_read(&cb_event_stats.curr);
+	uint32_t curr = atomic_read(&cb_event_stats.curr);
 	uint32_t valid = min(atomic_read(&cb_event_stats.validStats),
 			     MAX_VALID_INTERVALS);
 	uint32_t start =

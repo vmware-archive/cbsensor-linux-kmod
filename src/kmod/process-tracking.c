@@ -13,9 +13,9 @@
 
 #include "../cbevent/src/CB_EVENT_FILTER.h"
 
-uint64_t g_pt_process_op_cnt	     = 0;
-uint64_t g_pt_process_create	     = 0;
-uint64_t g_pt_process_exit	     = 0;
+uint64_t g_pt_process_op_cnt = 0;
+uint64_t g_pt_process_create = 0;
+uint64_t g_pt_process_exit = 0;
 uint64_t g_pt_process_create_by_fork = 0;
 uint64_t g_pt_process_create_by_exec = 0;
 
@@ -87,29 +87,29 @@ bool process_tracking_insert_process(pid_t pid, pid_t tid, pid_t parent,
 		return false;
 	}
 
-	procp->pt_key.pid     = pid;
-	procp->tid	      = tid;
-	procp->parent	      = parent;
-	procp->uid	      = uid;
-	procp->euid	      = euid;
-	procp->action	      = action;
-	procp->inode	      = event->processStart.inode;
-	procp->start_sent     = start_sent;
+	procp->pt_key.pid = pid;
+	procp->tid = tid;
+	procp->parent = parent;
+	procp->uid = uid;
+	procp->euid = euid;
+	procp->action = action;
+	procp->inode = event->processStart.inode;
+	procp->start_sent = start_sent;
 	procp->process_op_cnt = 0;
 	procp->process_create = 0;
-	procp->file_op_cnt    = 0;
-	procp->file_map_exec  = 0;
-	procp->file_create    = 0;
-	procp->file_delete    = 0;
-	procp->file_open      = 0;
-	procp->file_write     = 0;
-	procp->file_close     = 0;
-	procp->net_op_cnt     = 0;
-	procp->net_connect    = 0;
-	procp->net_accept     = 0;
-	procp->net_dns	      = 0;
-	procp->taskp	      = taskp;
-	procp->path[0]	      = 0;
+	procp->file_op_cnt = 0;
+	procp->file_map_exec = 0;
+	procp->file_create = 0;
+	procp->file_delete = 0;
+	procp->file_open = 0;
+	procp->file_write = 0;
+	procp->file_close = 0;
+	procp->net_op_cnt = 0;
+	procp->net_connect = 0;
+	procp->net_accept = 0;
+	procp->net_dns = 0;
+	procp->taskp = taskp;
+	procp->path[0] = 0;
 	procp->path[PATH_MAX] = 0;
 
 	memcpy(procp->path, event->processStart.path, PATH_MAX);
@@ -138,7 +138,7 @@ bool process_tracking_insert_process(pid_t pid, pid_t tid, pid_t parent,
 bool process_tracking_remove_process(pid_t pid)
 {
 	struct ProcessTracking *procp;
-	struct pt_table_key	key = { pid };
+	struct pt_table_key key = { pid };
 
 	procp = (struct ProcessTracking *)hashtbl_del_by_key_generic(
 		g_process_tracking_table, &key);
@@ -230,12 +230,12 @@ void process_tracking_update_op_cnts(struct ProcessTracking *procp,
 bool process_tracking_update_process(pid_t pid, pid_t tid, pid_t parent,
 				     uid_t uid, uid_t euid, int action,
 				     struct task_struct *taskp,
-				     struct CB_EVENT *	 event,
-				     enum CB_EVENT_TYPE	 event_type,
-				     bool		 start_sent)
+				     struct CB_EVENT *event,
+				     enum CB_EVENT_TYPE event_type,
+				     bool start_sent)
 {
 	struct ProcessTracking *procp;
-	struct pt_table_key	key = { pid };
+	struct pt_table_key key = { pid };
 
 	procp = (struct ProcessTracking *)hashtbl_get_generic(
 		g_process_tracking_table, &key);
@@ -296,12 +296,12 @@ struct ProcessTracking *is_process_tracked_get_state(pid_t pid)
 // be aware that any function call that may sleep should be avoided.
 // We also allocate an array of pointers and it is the responsibility of the
 // caller to free them when done.
-static int _hashtbl_search_callback(struct HashTbl *	  hashTblp,
+static int _hashtbl_search_callback(struct HashTbl *hashTblp,
 				    struct HashTableNode *nodep, void *priv)
 {
-	struct ProcessTracking *       procp		    = NULL;
+	struct ProcessTracking *procp = NULL;
 	struct RunningBannedInodeInfo *psRunningInodesToBan = NULL;
-	struct processes_to_ban *      temp		    = NULL;
+	struct processes_to_ban *temp = NULL;
 
 	// Saftey first
 	if (NULL == nodep || NULL == priv) {
@@ -311,7 +311,7 @@ static int _hashtbl_search_callback(struct HashTbl *	  hashTblp,
 		goto EXIT;
 	}
 
-	procp		     = (struct ProcessTracking *)nodep;
+	procp = (struct ProcessTracking *)nodep;
 	psRunningInodesToBan = (struct RunningBannedInodeInfo *)priv;
 
 	// Did we match based on inode?
@@ -373,22 +373,22 @@ bool process_tracking_get_process(pid_t pid, struct ProcessTracking **procp)
 void create_process_start_event(struct task_struct *task)
 {
 	struct CB_EVENT *event = NULL;
-	pid_t		 pid   = getpid(task);
-	pid_t		 tid   = gettid(task);
-	pid_t		 ppid  = getppid(task);
+	pid_t pid = getpid(task);
+	pid_t tid = gettid(task);
+	pid_t ppid = getppid(task);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-	uid_t uid  = current_cred()->uid.val;
+	uid_t uid = current_cred()->uid.val;
 	uid_t euid = current_cred()->euid.val;
 #else
-	uid_t uid  = current_cred()->uid;
+	uid_t uid = current_cred()->uid;
 	uid_t euid = current_cred()->euid;
 #endif
 
-	uint64_t       ino	= 0;
-	char *	       pathname = NULL;
-	uint64_t       pathsz	= 0;
-	struct inode * inodep	= NULL;
-	struct dentry *dentryp	= NULL;
+	uint64_t ino = 0;
+	char *pathname = NULL;
+	uint64_t pathsz = 0;
+	struct inode *inodep = NULL;
+	struct dentry *dentryp = NULL;
 
 	//
 	// This is a valid process, allocate an event
@@ -411,10 +411,10 @@ void create_process_start_event(struct task_struct *task)
 		process_tracking_should_track_user() ? uid : (uid_t)-1;
 	event->processStart.start_action = CB_PROCESS_START_BY_EXEC;
 	event->processStart.observed = false; // We want to tell user space this
-					      // is fake
-	event->processStart.path[0]	   = 0;
+		// is fake
+	event->processStart.path[0] = 0;
 	event->processStart.path[PATH_MAX] = 0;
-	event->processStart.path_found	   = false;
+	event->processStart.path_found = false;
 
 	dentryp = get_dentry_from_mm(task->mm);
 	if (dentryp) {
@@ -458,11 +458,11 @@ void create_process_start_event(struct task_struct *task)
 	PR_DEBUG("create_process_start event p=%d u=%d", pid, uid);
 }
 
-static int _show_process_tracking_table(struct HashTbl *      hashTblp,
+static int _show_process_tracking_table(struct HashTbl *hashTblp,
 					struct HashTableNode *nodep, void *priv)
 {
 	struct ProcessTracking *procp = (struct ProcessTracking *)nodep;
-	struct seq_file *	m     = (struct seq_file *)priv;
+	struct seq_file *m = (struct seq_file *)priv;
 
 	seq_printf(m, "%10s | %6llu | %6llu | %6llu | %10llu |\n",
 		   procp->taskp->comm, (uint64_t)procp->pt_key.pid,
@@ -499,13 +499,13 @@ int cb_proc_track_show_stats(struct seq_file *m, void *v)
 // Similar to  process_tracking_remove_process but we don't need to operate by a
 // key.
 //
-static int _hashtbl_clear_dead_callback(struct HashTbl *      hashTblp,
+static int _hashtbl_clear_dead_callback(struct HashTbl *hashTblp,
 					struct HashTableNode *nodep, void *priv)
 {
-	pid_t			pid;
-	int			action = ACTION_CONTINUE;
-	struct ProcessTracking *procp  = NULL;
-	struct CB_EVENT *	event  = NULL;
+	pid_t pid;
+	int action = ACTION_CONTINUE;
+	struct ProcessTracking *procp = NULL;
+	struct CB_EVENT *event = NULL;
 
 	if (!nodep) {
 		goto out;
@@ -513,7 +513,7 @@ static int _hashtbl_clear_dead_callback(struct HashTbl *      hashTblp,
 
 	// nodep is really not type HashTableNode for this callback
 	procp = (struct ProcessTracking *)nodep;
-	pid   = procp->pt_key.pid;
+	pid = procp->pt_key.pid;
 
 	if (cb_find_task(pid) == NULL) {
 		action = ACTION_DELETE;

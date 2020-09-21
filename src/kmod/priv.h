@@ -32,12 +32,12 @@ extern const char DRIVER_NAME[];
 #define CB_SENSOR_MAX_UIDS 5
 
 extern uint32_t g_eventFilter;
-extern uid_t	g_cb_server_uid;
-extern int64_t	g_cb_ignored_pid_count;
-extern int64_t	g_cb_ignored_uid_count;
-extern pid_t	g_cb_ignored_pids[CB_SENSOR_MAX_PIDS];
-extern uid_t	g_cb_ignored_uids[CB_SENSOR_MAX_UIDS];
-extern bool	g_exiting;
+extern uid_t g_cb_server_uid;
+extern int64_t g_cb_ignored_pid_count;
+extern int64_t g_cb_ignored_uid_count;
+extern pid_t g_cb_ignored_pids[CB_SENSOR_MAX_PIDS];
+extern uid_t g_cb_ignored_uids[CB_SENSOR_MAX_UIDS];
+extern bool g_exiting;
 
 extern bool cbBanningInitialize(void);
 extern void cbBanningShutdown(void);
@@ -163,19 +163,19 @@ extern void netfilter_cleanup(uint32_t enableHooks);
 // Stats Proc Helper
 bool cb_proc_initialize(void);
 void cb_proc_shutdown(void);
-int  cb_proc_track_show_table(struct seq_file *m, void *v);
-int  cb_proc_track_show_stats(struct seq_file *m, void *v);
-int  cb_file_track_show_table(struct seq_file *m, void *v);
+int cb_proc_track_show_table(struct seq_file *m, void *v);
+int cb_proc_track_show_stats(struct seq_file *m, void *v);
+int cb_file_track_show_table(struct seq_file *m, void *v);
 
 int cb_proc_current_memory_avg(struct seq_file *m, void *v);
 int cb_proc_current_memory_det(struct seq_file *m, void *v);
 
-extern pid_t		   getpid(struct task_struct *task);
-extern pid_t		   gettid(struct task_struct *task);
-extern pid_t		   getppid(struct task_struct *task);
+extern pid_t getpid(struct task_struct *task);
+extern pid_t gettid(struct task_struct *task);
+extern pid_t getppid(struct task_struct *task);
 extern struct task_struct *cb_find_task(pid_t pid);
-extern void		   get_starttime(struct timespec *start_time);
-extern void		   create_process_start_event(struct task_struct *task);
+extern void get_starttime(struct timespec *start_time);
+extern void create_process_start_event(struct task_struct *task);
 
 // ------------------------------------------------
 // Logging
@@ -183,13 +183,13 @@ extern void		   create_process_start_event(struct task_struct *task);
 extern bool logger_initialize(void);
 extern void logger_shutdown(void);
 
-extern struct CB_EVENT *logger_alloc_event(enum CB_EVENT_TYPE  eventType,
+extern struct CB_EVENT *logger_alloc_event(enum CB_EVENT_TYPE eventType,
 					   struct task_struct *task);
-extern struct CB_EVENT *logger_alloc_event_atomic(enum CB_EVENT_TYPE  eventType,
+extern struct CB_EVENT *logger_alloc_event_atomic(enum CB_EVENT_TYPE eventType,
 						  struct task_struct *task);
 extern struct CB_EVENT *logger_alloc_event_notask(enum CB_EVENT_TYPE eventType,
 						  pid_t pid, gfp_t allocType);
-extern void		logger_free_event_on_error(struct CB_EVENT *event);
+extern void logger_free_event_on_error(struct CB_EVENT *event);
 
 extern void logger_submit_event(struct CB_EVENT *event);
 
@@ -218,45 +218,45 @@ uint64_t to_windows_timestamp(struct timespec *tv);
 // Event Cache
 struct CB_EVENT_DATA {
 	struct kmem_cache *cb_event_cache;
-	atomic64_t	   eventAllocs;
+	atomic64_t eventAllocs;
 };
 
 extern struct CB_EVENT_DATA cb_event_data;
 
-extern int     cb_proc_show_events_avg(struct seq_file *m, void *v);
-extern int     cb_proc_show_events_det(struct seq_file *m, void *v);
+extern int cb_proc_show_events_avg(struct seq_file *m, void *v);
+extern int cb_proc_show_events_det(struct seq_file *m, void *v);
 extern ssize_t cb_proc_show_events_rst(struct file *file, const char *buf,
 				       size_t size, loff_t *ppos);
 extern ssize_t cb_net_track_purge_age(struct file *file, const char *buf,
 				      size_t size, loff_t *ppos);
 extern ssize_t cb_net_track_purge_all(struct file *file, const char *buf,
 				      size_t size, loff_t *ppos);
-extern int     cb_net_track_show_new(struct seq_file *m, void *v);
-extern int     cb_net_track_show_old(struct seq_file *m, void *v);
+extern int cb_net_track_show_new(struct seq_file *m, void *v);
+extern int cb_net_track_show_old(struct seq_file *m, void *v);
 
-extern int     cb_syscall_clone_get(struct seq_file *m, void *v);
+extern int cb_syscall_clone_get(struct seq_file *m, void *v);
 extern ssize_t cb_syscall_clone_set(struct file *file, const char *buf,
 				    size_t size, loff_t *ppos);
-extern int     cb_syscall_fork_get(struct seq_file *m, void *v);
+extern int cb_syscall_fork_get(struct seq_file *m, void *v);
 extern ssize_t cb_syscall_fork_set(struct file *file, const char *buf,
 				   size_t size, loff_t *ppos);
-extern int     cb_syscall_vfork_get(struct seq_file *m, void *v);
+extern int cb_syscall_vfork_get(struct seq_file *m, void *v);
 extern ssize_t cb_syscall_vfork_set(struct file *file, const char *buf,
 				    size_t size, loff_t *ppos);
-extern int     cb_syscall_recvfrom_get(struct seq_file *m, void *v);
+extern int cb_syscall_recvfrom_get(struct seq_file *m, void *v);
 extern ssize_t cb_syscall_recvfrom_set(struct file *file, const char *buf,
 				       size_t size, loff_t *ppos);
-extern int     cb_syscall_recvmsg_get(struct seq_file *m, void *v);
+extern int cb_syscall_recvmsg_get(struct seq_file *m, void *v);
 extern ssize_t cb_syscall_recvmsg_set(struct file *file, const char *buf,
 				      size_t size, loff_t *ppos);
-extern int     cb_syscall_recvmmsg_get(struct seq_file *m, void *v);
+extern int cb_syscall_recvmmsg_get(struct seq_file *m, void *v);
 extern ssize_t cb_syscall_recvmmsg_set(struct file *file, const char *buf,
 				       size_t size, loff_t *ppos);
-extern int     cb_syscall_write_get(struct seq_file *m, void *v);
+extern int cb_syscall_write_get(struct seq_file *m, void *v);
 extern ssize_t cb_syscall_write_set(struct file *file, const char *buf,
 				    size_t size, loff_t *ppos);
 
-extern int     cb_netfilter_local_out_get(struct seq_file *m, void *v);
+extern int cb_netfilter_local_out_get(struct seq_file *m, void *v);
 extern ssize_t cb_netfilter_local_out_set(struct file *file, const char *buf,
 					  size_t size, loff_t *ppos);
 
@@ -305,7 +305,7 @@ ssize_t cb_lsm_socket_recvmsg_set(struct file *file, const char *buf,
 				  size_t size, loff_t *ppos);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-int	cb_lsm_mmap_file_get(struct seq_file *m, void *v);
+int cb_lsm_mmap_file_get(struct seq_file *m, void *v);
 ssize_t cb_lsm_mmap_file_set(struct file *file, const char *buf, size_t size,
 			     loff_t *ppos);
 #else
@@ -317,13 +317,13 @@ ssize_t cb_lsm_file_mmap_set(struct file *file, const char *buf, size_t size,
 // ------------------------------------------------
 // File Helpers
 //
-extern bool  file_helper_init(void);
-extern bool  file_get_path(struct file *file, char *buffer, char **pathname);
+extern bool file_helper_init(void);
+extern bool file_get_path(struct file *file, char *buffer, char **pathname);
 extern char *dentry_to_path(struct dentry *dentry, char *buf);
 extern struct inode *get_inode_from_file(struct file *file);
 extern struct inode *get_inode_from_dentry(struct dentry *dentry);
-extern bool	     is_interesting_file(umode_t mode);
-extern int	     isSpecialFile(char *pathname, int len);
+extern bool is_interesting_file(umode_t mode);
+extern int isSpecialFile(char *pathname, int len);
 
 //------------------------------------
 // Symbol lookup
@@ -391,14 +391,14 @@ extern CB_RESOLVED_SYMS g_resolvedSymbols;
 
 // Helpers
 struct symbols_s {
-	char *	       name;
-	int	       len;
+	char *name;
+	int len;
 	unsigned long *addr;
 };
 struct symbol_list {
 	struct symbols_s *symbols;
-	unsigned long	  size;
-	unsigned long	  count;
+	unsigned long size;
+	unsigned long count;
 };
 extern void lookup_symbols(struct symbol_list *sym_list);
 extern void printAddress(char *msg, const char *fn, const struct sock *sk,

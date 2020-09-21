@@ -8,8 +8,8 @@
 #include <linux/spinlock.h>
 
 struct fwc_bkt {
-	spinlock_t	 lock;
-	u32		 size;
+	spinlock_t lock;
+	u32 size;
 	struct list_head list;
 };
 
@@ -17,14 +17,14 @@ struct fwc_key {
 	pid_t tgid;
 	ino_t inode;
 	dev_t dev;
-	u64   time;
+	u64 time;
 };
 
 struct fwc_entry {
-	u32		 hash;
-	struct fwc_key	 key;
+	u32 hash;
+	struct fwc_key key;
 	struct list_head list;
-	u32		 hits;
+	u32 hits;
 };
 
 struct fwc_cache {
@@ -73,7 +73,7 @@ int fwc_register(void)
 	return 0;
 }
 static void fwc_free_entries(void);
-void	    fwc_shutdown(void)
+void fwc_shutdown(void)
 {
 	if (fwc_cache) {
 		// Shutdown Cache
@@ -89,8 +89,8 @@ void	    fwc_shutdown(void)
 static void fwc_free_entries(void)
 {
 	struct fwc_entry *entry, *tmp;
-	int		  i;
-	unsigned long	  flags;
+	int i;
+	unsigned long flags;
 
 	for (i = 0; i < FWC_BUCKETS; i++) {
 		spin_lock_irqsave(&fwc_cache->bkt[i].lock, flags);
@@ -124,21 +124,21 @@ static struct fwc_entry *__lookup_entry_safe(u32 hash, struct fwc_key *key,
 // Return 0 and increment hit When Entry Exists
 int fwc_entry_exists(pid_t tgid, ino_t inode, dev_t dev, u64 time, gfp_t mode)
 {
-	u32		  hash;
-	unsigned long	  flags;
+	u32 hash;
+	unsigned long flags;
 	struct fwc_entry *entry;
-	struct fwc_bkt *  bkt;
-	int		  bkt_index;
-	struct fwc_key	  key = {
-		   .tgid = tgid, .inode = inode, .dev = dev, .time = time
+	struct fwc_bkt *bkt;
+	int bkt_index;
+	struct fwc_key key = {
+		.tgid = tgid, .inode = inode, .dev = dev, .time = time
 	};
 	if (!fwc_cache_enabled) {
 		return 0;
 	}
 
-	hash	  = fwc_hash(&key);
+	hash = fwc_hash(&key);
 	bkt_index = fwc_bucket_index(hash);
-	bkt	  = &(fwc_cache->bkt[bkt_index]);
+	bkt = &(fwc_cache->bkt[bkt_index]);
 
 	// Lookup Entry
 	spin_lock_irqsave(&bkt->lock, flags);

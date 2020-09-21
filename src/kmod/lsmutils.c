@@ -31,7 +31,7 @@ static int allsyms_find_symbol(void *data, const char *symstr,
 			       struct module *module, unsigned long address)
 {
 	struct symbol_list *list = (struct symbol_list *)data;
-	struct symbols_s *  curr_symbol;
+	struct symbols_s *curr_symbol;
 
 	if (!list) {
 		return 0;
@@ -72,9 +72,9 @@ void lookup_symbols(struct symbol_list *sym_list)
 }
 
 struct linuxSpinlock {
-	spinlock_t    sp;
-	pid_t	      create_pid;
-	pid_t	      owner_pid;
+	spinlock_t sp;
+	pid_t create_pid;
+	pid_t owner_pid;
 	unsigned long flags;
 };
 
@@ -94,9 +94,9 @@ void cb_initspinlock(uint64_t *sp)
 		new_spinlock->sp = SPIN_LOCK_UNLOCKED;
 #endif
 		new_spinlock->create_pid = gettid(current);
-		new_spinlock->owner_pid	 = 0;
-		new_spinlock->flags	 = 0;
-		*sp			 = (uint64_t)new_spinlock;
+		new_spinlock->owner_pid = 0;
+		new_spinlock->flags = 0;
+		*sp = (uint64_t)new_spinlock;
 	} else {
 		PRINTK(KERN_WARNING, "failed initialize spinlock pid=%d",
 		       gettid(current));
@@ -107,7 +107,7 @@ void cb_initspinlock(uint64_t *sp)
 void cb_spinlock(const uint64_t *sp)
 {
 	struct linuxSpinlock *spinlockp = (struct linuxSpinlock *)*sp;
-	pid_t		      tid	= gettid(current);
+	pid_t tid = gettid(current);
 
 #ifdef DEADLOCK_DBG
 	if (spinlockp->owner_pid == tid && spin_is_locked(&spinlockp->sp)) {

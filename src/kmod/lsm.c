@@ -9,14 +9,14 @@
 static bool g_lsmRegistered = false;
 
 struct security_operations *g_original_ops_ptr; // Any LSM which we are layered
-						// on top of
+	// on top of
 static struct security_operations g_combined_ops; // Original LSM plus our hooks
-						  // combined
+	// combined
 
-extern int  cb_bprm_check_security(struct linux_binprm *bprm);
+extern int cb_bprm_check_security(struct linux_binprm *bprm);
 extern void cb_bprm_committed_creds(struct linux_binprm *bprm);
 
-extern int  task_wait(struct task_struct *p);
+extern int task_wait(struct task_struct *p);
 extern void cb_task_free(struct task_struct *p);
 
 extern uint32_t g_enableHooks;
@@ -33,10 +33,10 @@ extern int on_file_mmap(struct file *file, unsigned long reqprot,
 extern int on_inode_create(struct inode *dir, struct dentry *dentry, int mode);
 #endif
 
-extern int  on_inode_rename(struct inode *old_dir, struct dentry *old_dentry,
-			    struct inode *new_dir, struct dentry *new_dentry);
-extern int  on_inode_unlink(struct inode *dir, struct dentry *dentry);
-extern int  on_file_permission(struct file *file, int mask);
+extern int on_inode_rename(struct inode *old_dir, struct dentry *old_dentry,
+			   struct inode *new_dir, struct dentry *new_dentry);
+extern int on_inode_unlink(struct inode *dir, struct dentry *dentry);
+extern int on_file_permission(struct file *file, int mask);
 extern void on_file_free(struct file *file);
 
 extern int cb_socket_connect_hook(struct socket *sock, struct sockaddr *addr,
@@ -101,24 +101,24 @@ bool lsm_initialize(uint32_t enableHooks)
 	if (enableHooks & CB__LSM_socket_connect)
 		g_combined_ops.socket_connect =
 			cb_socket_connect_hook; // outgoing
-						// connects
-						// (pre)
+			// connects
+			// (pre)
 	if (enableHooks & CB__LSM_inet_conn_request)
 		g_combined_ops.inet_conn_request =
 			cb_inet_conn_request; // incoming accept (pre)
 	if (enableHooks & CB__LSM_socket_sock_rcv_skb)
 		g_combined_ops.socket_sock_rcv_skb =
 			on_sock_rcv_skb; // incoming
-					 // UDP/DNS
+			// UDP/DNS
 	if (enableHooks & CB__LSM_socket_post_create)
 		g_combined_ops.socket_post_create = socket_post_create;
 	if (enableHooks & CB__LSM_socket_sendmsg)
 		g_combined_ops.socket_sendmsg = socket_sendmsg;
 	if (enableHooks & CB__LSM_socket_recvmsg)
 		g_combined_ops.socket_recvmsg = socket_recvmsg; // incoming
-								// UDP/DNS -
-								// where we get
-								// the
+			// UDP/DNS -
+			// where we get
+			// the
 	// process context
 
 	*CB_RESOLVED(security_ops) = &g_combined_ops;
@@ -133,8 +133,8 @@ CATCH_DEFAULT:
 
 bool lsm_hooks_changed(uint32_t enableHooks)
 {
-	bool			    changed = false;
-	struct security_operations *secops  = *CB_RESOLVED(security_ops);
+	bool changed = false;
+	struct security_operations *secops = *CB_RESOLVED(security_ops);
 
 	if (enableHooks & CB__LSM_bprm_check_security)
 		changed |= secops->bprm_check_security !=
