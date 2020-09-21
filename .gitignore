@@ -1,5 +1,6 @@
 *~
 tags
+tags.lock
 *.o
 .*.o.cmd
 .*.ko.cmd

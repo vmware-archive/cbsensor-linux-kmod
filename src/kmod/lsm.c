@@ -101,15 +101,15 @@ bool lsm_initialize(uint32_t enableHooks)
 	if (enableHooks & CB__LSM_socket_connect)
 		g_combined_ops.socket_connect =
 			cb_socket_connect_hook; // outgoing
-			// connects
-			// (pre)
+	// connects
+	// (pre)
 	if (enableHooks & CB__LSM_inet_conn_request)
 		g_combined_ops.inet_conn_request =
 			cb_inet_conn_request; // incoming accept (pre)
 	if (enableHooks & CB__LSM_socket_sock_rcv_skb)
 		g_combined_ops.socket_sock_rcv_skb =
 			on_sock_rcv_skb; // incoming
-			// UDP/DNS
+	// UDP/DNS
 	if (enableHooks & CB__LSM_socket_post_create)
 		g_combined_ops.socket_post_create = socket_post_create;
 	if (enableHooks & CB__LSM_socket_sendmsg)
