@@ -18,11 +18,11 @@
 
 #pragma pack(push, 1)
 struct CB_EVENT_NETWORK_CONNECT {
-	int32_t		   protocol;
+	int32_t protocol;
 	union CB_SOCK_ADDR localAddr;
 	union CB_SOCK_ADDR remoteAddr;
-	char		   actual_server[CB_PROXY_SERVER_MAX_LEN];
-	uint16_t	   actual_port;
+	char actual_server[CB_PROXY_SERVER_MAX_LEN];
+	uint16_t actual_port;
 
 #ifdef __cplusplus
 	bool is_v4() const

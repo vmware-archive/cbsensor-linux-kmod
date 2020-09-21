@@ -23,12 +23,12 @@
 struct CB_EVENT_PROCESS_START {
 	pid_t parent;
 	uid_t uid;
-	int   start_action; // 1 = FORK 2 = EXEC
-	bool  observed; // Flag to identify if the start was actually observed,
-		       // or this fake
-	uint64_t     inode; // If we have it otherwise 0
-	char	     path[PATH_MAX + 1];
+	int start_action; // 1 = FORK 2 = EXEC
+	bool observed; // Flag to identify if the start was actually observed,
+		// or this fake
+	uint64_t inode; // If we have it otherwise 0
+	char path[PATH_MAX + 1];
 	cb_cmdline_t cmdLine;
-	bool	     path_found;
+	bool path_found;
 };
 #pragma pack(pop)

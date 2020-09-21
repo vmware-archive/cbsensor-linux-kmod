@@ -14,7 +14,7 @@
 
 union CB_SOCK_ADDR {
 	struct sockaddr_storage ss_addr;
-	struct sockaddr		sa_addr;
-	struct sockaddr_in	as_in4;
-	struct sockaddr_in6	as_in6;
+	struct sockaddr sa_addr;
+	struct sockaddr_in as_in4;
+	struct sockaddr_in6 as_in6;
 };
