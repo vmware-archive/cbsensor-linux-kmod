@@ -619,9 +619,9 @@ static bool cb_getudppeername(struct sock *sk, union CB_SOCK_ADDR *remoteAddr,
 static void cb_getpeername(struct sock *sk, union CB_SOCK_ADDR *remoteAddr,
 			   struct msghdr *msg)
 {
-	CANCEL_VOID(sk);
-	CANCEL_VOID(remoteAddr);
-	CANCEL_VOID(msg);
+	if (!sk || !remoteAddr || !msg) {
+		return;
+	}
 
 	// Use msg->msg_name if we are doing UDP else ...
 	if (!cb_getudppeername(sk, remoteAddr, msg)) {
@@ -651,9 +651,9 @@ static void cb_getsockname(struct sock *sk, union CB_SOCK_ADDR *localAddr,
 {
 	struct inet_sock *inet;
 
-	CANCEL_VOID(sk);
-	CANCEL_VOID(localAddr);
-	CANCEL_VOID(msg);
+	if (!sk || !localAddr || !msg) {
+		return;
+	}
 
 	inet = inet_sk(sk);
 
