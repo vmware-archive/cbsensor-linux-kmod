@@ -9,9 +9,9 @@
 
 struct file_type_state {
 	enum CB_FILE_TYPE fileType;
-	bool		  didReadType;
-	bool		  isSpecialFile;
-	bool		  try_vfs_read;
+	bool didReadType;
+	bool isSpecialFile;
+	bool try_vfs_read;
 };
 struct file_write_path {
 	char buf[PATH_MAX + 1];
@@ -23,9 +23,9 @@ struct file_write_key {
 // Add inode and device when CB_EVENT
 // can handle them on generic file events
 struct file_write_entry {
-	struct HashTableNode   link;
-	struct file_write_key  key;
-	pid_t		       last_tgid;
+	struct HashTableNode link;
+	struct file_write_key key;
+	pid_t last_tgid;
 	struct file_type_state state;
 	struct file_write_path path;
 };

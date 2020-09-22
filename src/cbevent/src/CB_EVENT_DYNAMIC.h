@@ -11,6 +11,6 @@
 #endif
 
 struct CB_EVENT_DYNAMIC {
-	size_t	      size;
+	size_t size;
 	unsigned long data;
 };

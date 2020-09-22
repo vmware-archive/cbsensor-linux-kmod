@@ -11,8 +11,8 @@
 
 enum CB_ISOLATION_ACTION {
 	IsolationActionDisabled = 0,
-	IsolationActionAllow	= 1,
-	IsolationActionBlock	= 2
+	IsolationActionAllow = 1,
+	IsolationActionBlock = 2
 };
 
 struct CB_ISOLATION_INTERCEPT_RESULT {
@@ -20,7 +20,7 @@ struct CB_ISOLATION_INTERCEPT_RESULT {
 };
 
 struct CB_ISOLATION_STATS {
-	bool	 isolationEnabled;
+	bool isolationEnabled;
 	uint64_t isolationBlockedInboundIp4Packets;
 	uint64_t isolationBlockedInboundIp6Packets;
 	uint64_t isolationAllowedInboundIp4Packets;

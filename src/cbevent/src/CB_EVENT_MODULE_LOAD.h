@@ -15,7 +15,7 @@
 
 #pragma pack(push, 1)
 struct CB_EVENT_MODULE_LOAD {
-	char	moduleName[PATH_MAX + 1];
+	char moduleName[PATH_MAX + 1];
 	int64_t baseaddress;
 };
 #pragma pack(pop)

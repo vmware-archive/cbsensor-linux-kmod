@@ -24,60 +24,60 @@
 
 struct HashTbl {
 	struct hashtbl_bkt *tablePtr;
-	struct list_head    genTables;
-	uint64_t	    numberOfBuckets;
-	uint32_t	    secret;
-	atomic64_t	    tableInstance;
-	atomic64_t	    tableAllocs;
-	atomic64_t	    tableShutdown; // shutting down = 1 running = 0
-	int		    key_len;
-	struct kmem_cache * hash_cache;
-	uint8_t		    name[20];
-	int		    key_offset;
-	int		    node_offset;
-	int		    cmp_len;
+	struct list_head genTables;
+	uint64_t numberOfBuckets;
+	uint32_t secret;
+	atomic64_t tableInstance;
+	atomic64_t tableAllocs;
+	atomic64_t tableShutdown; // shutting down = 1 running = 0
+	int key_len;
+	struct kmem_cache *hash_cache;
+	uint8_t name[20];
+	int key_offset;
+	int node_offset;
+	int cmp_len;
 	bool (*cmp_key)(const void *a, const void *b, int len);
 	size_t base_size;
 };
 
 struct hashtbl_bkt {
-	spinlock_t	  lock;
+	spinlock_t lock;
 	struct hlist_head head;
 };
 
 struct HashTableNode {
 	struct hlist_node link;
-	uint32_t	  hash;
+	uint32_t hash;
 };
 
-extern uint64_t		g_hashtbl_generic_lock;
+extern uint64_t g_hashtbl_generic_lock;
 extern struct list_head g_hashtbl_generic;
 
-typedef int (*hashtbl_for_each_generic_cb)(struct HashTbl *	 tblp,
+typedef int (*hashtbl_for_each_generic_cb)(struct HashTbl *tblp,
 					   struct HashTableNode *datap,
-					   void *		 priv);
+					   void *priv);
 
 struct HashTbl *hashtbl_init_generic(uint64_t numberOfBuckets,
 				     uint64_t datasize, uint64_t sizehint,
 				     const char *hashtble_name, int key_len,
 				     int key_offset, int node_offset);
-void *		hashtbl_alloc_generic(struct HashTbl *tblp, int alloc_type);
-int		hashtbl_add_generic(struct HashTbl *tblp, void *datap);
-void *		hashtbl_del_by_key_generic(struct HashTbl *tblp, void *key);
-void		hashtbl_del_generic(struct HashTbl *tblp, void *datap);
-void *		hashtbl_get_generic(struct HashTbl *tblp, void *key);
-void		hashtbl_free_generic(struct HashTbl *tblp, void *datap);
-void		hashtbl_shutdown_generic(struct HashTbl *tblp);
-void		hashtbl_clear_generic(struct HashTbl *tblp);
-void		hashtbl_for_each_generic(struct HashTbl *	     tblp,
-					 hashtbl_for_each_generic_cb callback, void *priv);
-int		hashtbl_show_proc_cache(struct seq_file *m, void *v);
-size_t		hashtbl_get_memory(void);
-void		hash_table_test(void);
+void *hashtbl_alloc_generic(struct HashTbl *tblp, int alloc_type);
+int hashtbl_add_generic(struct HashTbl *tblp, void *datap);
+void *hashtbl_del_by_key_generic(struct HashTbl *tblp, void *key);
+void hashtbl_del_generic(struct HashTbl *tblp, void *datap);
+void *hashtbl_get_generic(struct HashTbl *tblp, void *key);
+void hashtbl_free_generic(struct HashTbl *tblp, void *datap);
+void hashtbl_shutdown_generic(struct HashTbl *tblp);
+void hashtbl_clear_generic(struct HashTbl *tblp);
+void hashtbl_for_each_generic(struct HashTbl *tblp,
+			      hashtbl_for_each_generic_cb callback, void *priv);
+int hashtbl_show_proc_cache(struct seq_file *m, void *v);
+size_t hashtbl_get_memory(void);
+void hash_table_test(void);
 
 // Use these when you want to more safely
 // access entry data.
 bool hashtbl_getlocked_bucket(struct HashTbl *hashTblp, void *key, void **datap,
 			      struct hashtbl_bkt **bkt, unsigned long *flags);
 void hashtbl_unlock_bucket(struct hashtbl_bkt *bkt, unsigned long flags);
-int  hashtbl_add_safe_generic(struct HashTbl *hashTblp, void *datap);
+int hashtbl_add_safe_generic(struct HashTbl *hashTblp, void *datap);

@@ -16,14 +16,14 @@ int on_file_mmap(struct file *file, unsigned long reqprot, unsigned long prot,
 		 unsigned long addr_only)
 #endif
 {
-	int		 xcode;
-	struct inode *	 inode;
+	int xcode;
+	struct inode *inode;
 	struct CB_EVENT *event;
-	char *		 pathname;
-	uint64_t	 pathsz;
-	pid_t		 pid = getpid(current);
-	pid_t		 tid = gettid(current);
-	bool		 path_found;
+	char *pathname;
+	uint64_t pathsz;
+	pid_t pid = getpid(current);
+	pid_t tid = gettid(current);
+	bool path_found;
 	MODULE_GET();
 
 	if (((prot & PROT_EXEC) == 0) || (prot & PROT_WRITE)) {

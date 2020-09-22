@@ -22,15 +22,15 @@
 static DECLARE_WAIT_QUEUE_HEAD(clone_wait);
 struct clone_struct {
 	struct task_struct *task;
-	struct list_head    head;
-	spinlock_t	    lock;
-	unsigned long	    len;
+	struct list_head head;
+	spinlock_t lock;
+	unsigned long len;
 };
 static struct clone_struct clone_queue = { .task = NULL };
 
 struct clone_event {
 	struct list_head list;
-	pid_t		 pid;
+	pid_t pid;
 	struct CB_EVENT *event;
 };
 
@@ -46,7 +46,7 @@ int ktfutce_register(void)
 
 	clone_queue.task = kthread_run(ktfutce_thread, NULL, "cb_ktfutce");
 	if (IS_ERR(clone_queue.task)) {
-		ret		 = PTR_ERR(clone_queue.task);
+		ret = PTR_ERR(clone_queue.task);
 		clone_queue.task = NULL;
 	}
 	return ret;
@@ -57,7 +57,7 @@ void ktfutce_shutdown(void)
 {
 	if (clone_queue.task) {
 		struct task_struct *task = clone_queue.task;
-		clone_queue.task	 = NULL;
+		clone_queue.task = NULL;
 		wake_up_interruptible(&clone_wait);
 		kthread_stop(task);
 	}
@@ -66,7 +66,7 @@ void ktfutce_shutdown(void)
 // Enqueue a fork event and ask the kthread to work on it
 int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 {
-	unsigned long	    flags;
+	unsigned long flags;
 	struct clone_event *clone_event = NULL;
 
 	if (!clone_queue.task || !pid) {
@@ -79,7 +79,7 @@ int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 	}
 
 	INIT_LIST_HEAD(&clone_event->list);
-	clone_event->pid   = pid;
+	clone_event->pid = pid;
 	clone_event->event = event;
 
 	spin_lock_irqsave(&clone_queue.lock, flags);
@@ -93,7 +93,7 @@ int ktfutce_add_pid(pid_t pid, struct CB_EVENT *event, gfp_t mode)
 
 static inline struct clone_event *clone_shift(void)
 {
-	unsigned long	    flags;
+	unsigned long flags;
 	struct clone_event *clone_event = NULL;
 
 	spin_lock_irqsave(&clone_queue.lock, flags);
@@ -116,17 +116,17 @@ static inline struct clone_event *clone_shift(void)
 static int ktfutce_thread(void *arg)
 {
 	while (!kthread_should_stop()) {
-		pid_t		    pid;
-		struct task_struct *task	= NULL;
+		pid_t pid;
+		struct task_struct *task = NULL;
 		struct clone_event *clone_event = NULL;
-		struct CB_EVENT *   event	= NULL;
+		struct CB_EVENT *event = NULL;
 
 		clone_event = clone_shift();
 		if (!clone_event) {
 			goto wait;
 		}
 
-		pid   = clone_event->pid;
+		pid = clone_event->pid;
 		event = clone_event->event;
 		kfree(clone_event);
 		clone_event = NULL;

@@ -19,14 +19,14 @@ static inline bool is_root_uid(void)
 }
 
 long (*cb_orig_sys_delete_module)(const char __user *name_user,
-				  unsigned int	     flags) = NULL;
+				  unsigned int flags) = NULL;
 
 asmlinkage long cb_sys_delete_module(const char __user *name_user,
-				     unsigned int	flags)
+				     unsigned int flags)
 {
 	const size_t slen = strlen(DRIVER_NAME);
-	char	     name_kernel[slen];
-	int	     rval;
+	char name_kernel[slen];
+	int rval;
 
 	/* strncpy_from_user() does an access_ok check to see if this is user
 	   memory. If it is not user memory, it returns -EFAULT. In that case

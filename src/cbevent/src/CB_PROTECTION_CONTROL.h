@@ -14,13 +14,13 @@
 #pragma pack(push, 1)
 
 struct protectionData {
-	int	 action;
+	int action;
 	uint64_t inode;
 };
 
 #define KERNMSG_MAX 10
 struct CB_PROTECTION_CONTROL {
-	uint64_t	      count; // 1 - 10
+	uint64_t count; // 1 - 10
 	struct protectionData data[KERNMSG_MAX];
 };
 

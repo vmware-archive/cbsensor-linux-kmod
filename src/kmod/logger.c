@@ -14,8 +14,8 @@ struct CB_EVENT_DATA cb_event_data = { 0 };
 
 bool user_comm_initialize(void);
 void user_comm_shutdown(void);
-int  user_comm_send_event(struct CB_EVENT *);
-int  user_comm_send_event_atomic(struct CB_EVENT *);
+int user_comm_send_event(struct CB_EVENT *);
+int user_comm_send_event_atomic(struct CB_EVENT *);
 
 uint64_t to_windows_timestamp(struct timespec *tv)
 {
@@ -51,7 +51,7 @@ static void logger_free_event(struct CB_EVENT *event)
 	atomic64_dec(&(cb_event_data.eventAllocs));
 }
 
-static void getprocinfo(struct task_struct *	      task,
+static void getprocinfo(struct task_struct *task,
 			struct CB_EVENT_PROCESS_INFO *procInfo)
 {
 	if (task != NULL) {
@@ -117,7 +117,7 @@ struct CB_EVENT *logger_alloc_event_notask(enum CB_EVENT_TYPE eventType,
 					   pid_t pid, gfp_t allocType)
 {
 	struct CB_EVENT *event = NULL;
-	uid_t		 uid;
+	uid_t uid;
 
 	if (!cb_event_data.cb_event_cache) {
 		goto out;
@@ -129,7 +129,7 @@ struct CB_EVENT *logger_alloc_event_notask(enum CB_EVENT_TYPE eventType,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 	uid = current_cred()->uid.val;
 #else
-	uid	  = current_cred()->uid;
+	uid = current_cred()->uid;
 #endif
 	if (shouldExcludeByUID(uid)) {
 		goto out;
@@ -144,7 +144,7 @@ struct CB_EVENT *logger_alloc_event_notask(enum CB_EVENT_TYPE eventType,
 
 	atomic64_inc(&(cb_event_data.eventAllocs));
 	event->eventType = eventType;
-	event->canary	 = 0;
+	event->canary = 0;
 	getprocinfo(NULL, &event->procInfo);
 	event->procInfo.pid = pid;
 
@@ -153,7 +153,7 @@ out:
 }
 
 static struct CB_EVENT *
-logger_alloc_event_internal(enum CB_EVENT_TYPE	eventType,
+logger_alloc_event_internal(enum CB_EVENT_TYPE eventType,
 			    struct task_struct *task, gfp_t allocType)
 {
 	struct CB_EVENT *event = NULL;
@@ -181,7 +181,7 @@ logger_alloc_event_internal(enum CB_EVENT_TYPE	eventType,
 	if (event) {
 		atomic64_inc(&(cb_event_data.eventAllocs));
 		event->eventType = eventType;
-		event->canary	 = 0;
+		event->canary = 0;
 		getprocinfo(task, &event->procInfo);
 		goto Exit;
 	}
@@ -191,13 +191,13 @@ Exit:
 	return event;
 }
 
-struct CB_EVENT *logger_alloc_event_atomic(enum CB_EVENT_TYPE  eventType,
+struct CB_EVENT *logger_alloc_event_atomic(enum CB_EVENT_TYPE eventType,
 					   struct task_struct *task)
 {
 	return logger_alloc_event_internal(eventType, task, GFP_ATOMIC);
 }
 
-struct CB_EVENT *logger_alloc_event(enum CB_EVENT_TYPE	eventType,
+struct CB_EVENT *logger_alloc_event(enum CB_EVENT_TYPE eventType,
 				    struct task_struct *task)
 {
 	return logger_alloc_event_internal(eventType, task, GFP_KERNEL);

@@ -10,7 +10,7 @@
 
 #pragma pack(push, 1)
 struct CB_EVENT_FILE_GENERIC {
-	char		  path[PATH_MAX + 1];
+	char path[PATH_MAX + 1];
 	enum CB_FILE_TYPE file_type;
 };
 #pragma pack(pop)

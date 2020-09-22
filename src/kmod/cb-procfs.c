@@ -23,8 +23,8 @@ typedef ssize_t (*fp_writeCallback)(struct file *, const char __user *, size_t,
 
 // Common
 struct CbProcFs {
-	const char *	 name;
-	fp_readCallback	 r_callback;
+	const char *name;
+	fp_readCallback r_callback;
 	fp_writeCallback w_callback;
 };
 
@@ -123,7 +123,7 @@ static int dummy_show(struct seq_file *m, void *v)
 
 static int cb_proc_open(struct inode *inode, struct file *file)
 {
-	uint64_t	procId	 = (uint64_t)PDE_DATA(inode);
+	uint64_t procId = (uint64_t)PDE_DATA(inode);
 	fp_readCallback callback = proc_callbacks[procId].r_callback;
 
 	if (procId >= (sizeof(proc_callbacks) / sizeof(struct CbProcFs)))
@@ -138,11 +138,12 @@ static ssize_t cb_proc_write(struct file *file, const char __user *buf,
 {
 	uint64_t procId =
 		(uint64_t)((struct seq_file *)file->private_data)->private;
-	ssize_t len	   = 0;
-	char	buffer[20] = { 0 };
+	ssize_t len = 0;
+	char buffer[20] = { 0 };
 
 	size = (size < 20 ? size : 19);
-	if (copy_from_user(buffer, buf, size)) size = 0;
+	if (copy_from_user(buffer, buf, size))
+		size = 0;
 	buffer[size] = 0;
 
 	if (proc_callbacks[procId].w_callback) {
@@ -154,10 +155,10 @@ static ssize_t cb_proc_write(struct file *file, const char __user *buf,
 }
 
 static const struct file_operations cb_fops = {
-	.owner	 = THIS_MODULE,
-	.open	 = cb_proc_open,
-	.read	 = seq_read,
-	.write	 = cb_proc_write,
+	.owner = THIS_MODULE,
+	.open = cb_proc_open,
+	.read = seq_read,
+	.write = cb_proc_write,
 	.release = single_release,
 };
 

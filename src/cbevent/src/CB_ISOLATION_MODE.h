@@ -13,6 +13,6 @@ enum CB_ISOLATION_MODE { IsolationModeOff = 0, IsolationModeOn = 1 };
 
 struct CB_ISOLATION_MODE_CONTROL {
 	enum CB_ISOLATION_MODE isolationMode;
-	uint32_t	       numberOfAllowedIpAddresses;
-	uint32_t	       allowedIpAddresses[1];
+	uint32_t numberOfAllowedIpAddresses;
+	uint32_t allowedIpAddresses[1];
 };

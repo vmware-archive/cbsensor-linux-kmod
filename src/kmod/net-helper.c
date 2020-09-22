@@ -12,21 +12,23 @@ static size_t rpc_ntop6_noscopeid(const struct sockaddr *sap, char *buf,
 				  const int buflen)
 {
 	const struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
-	const struct in6_addr *	   addr = &sin6->sin6_addr;
+	const struct in6_addr *addr = &sin6->sin6_addr;
 
 	/*
 	 * RFC 4291, Section 2.2.2
 	 *
 	 * Shorthanded ANY address
 	 */
-	if (ipv6_addr_any(addr)) return snprintf(buf, buflen, "::");
+	if (ipv6_addr_any(addr))
+		return snprintf(buf, buflen, "::");
 
 	/*
 	 * RFC 4291, Section 2.2.2
 	 *
 	 * Shorthanded loopback address
 	 */
-	if (ipv6_addr_loopback(addr)) return snprintf(buf, buflen, "::1");
+	if (ipv6_addr_loopback(addr))
+		return snprintf(buf, buflen, "::1");
 
 	/*
 	 * RFC 4291, Section 2.2.3
@@ -47,23 +49,27 @@ static size_t rpc_ntop6(const struct sockaddr *sap, char *buf,
 			const size_t buflen)
 {
 	const struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sap;
-	char			   scopebuf[IPV6_SCOPE_ID_LEN];
-	size_t			   len;
-	int			   rc;
+	char scopebuf[IPV6_SCOPE_ID_LEN];
+	size_t len;
+	int rc;
 
 	len = rpc_ntop6_noscopeid(sap, buf, buflen);
-	if (unlikely(len == 0)) return len;
+	if (unlikely(len == 0))
+		return len;
 
 	if (!(ipv6_addr_type(&sin6->sin6_addr) & IPV6_ADDR_LINKLOCAL))
 		return len;
-	if (sin6->sin6_scope_id == 0) return len;
+	if (sin6->sin6_scope_id == 0)
+		return len;
 
 	rc = snprintf(scopebuf, sizeof(scopebuf), "%c%u", IPV6_SCOPE_DELIMITER,
 		      sin6->sin6_scope_id);
-	if (unlikely((size_t)rc > sizeof(scopebuf))) return 0;
+	if (unlikely((size_t)rc > sizeof(scopebuf)))
+		return 0;
 
 	len += rc;
-	if (unlikely(len > buflen)) return 0;
+	if (unlikely(len > buflen))
+		return 0;
 
 	strcat(buf, scopebuf);
 	return len;

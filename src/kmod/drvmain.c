@@ -20,19 +20,19 @@
 #endif
 
 uint32_t g_debug_subsystem = 0;
-uint32_t g_eventFilter	   = CB_EVENT_FILTER_ALL;
+uint32_t g_eventFilter = CB_EVENT_FILTER_ALL;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 uint32_t g_pid_gc_freq = 0;
 #else
 uint32_t g_pid_gc_freq = 30;
 #endif
-uint32_t g_enableHooks		= HOOK_MASK;
-uid_t	 g_cb_server_uid	= (uid_t)-1;
-int64_t	 g_cb_ignored_pid_count = 0;
-pid_t	 g_cb_ignored_pids[CB_SENSOR_MAX_PIDS];
-int64_t	 g_cb_ignored_uid_count = 0;
-uid_t	 g_cb_ignored_uids[CB_SENSOR_MAX_UIDS];
-bool	 g_exiting = false;
+uint32_t g_enableHooks = HOOK_MASK;
+uid_t g_cb_server_uid = (uid_t)-1;
+int64_t g_cb_ignored_pid_count = 0;
+pid_t g_cb_ignored_pids[CB_SENSOR_MAX_PIDS];
+int64_t g_cb_ignored_uid_count = 0;
+uid_t g_cb_ignored_uids[CB_SENSOR_MAX_UIDS];
+bool g_exiting = false;
 
 module_param(g_debug_subsystem, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 module_param(g_eventFilter, uint, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
@@ -54,11 +54,11 @@ static int __init cbsensor_init(void)
 #define CB_RESOLV_FUNCTION(F_TYPE, F_NAME, ARGS_DECL) \
 	CB_RESOLV_VARIABLE(F_TYPE, F_NAME)
 
-	struct symbols_s   symbols[] = { CB_RESOLV_SYMBOLS{ NULL, 0, NULL } };
-	struct symbol_list sym_list  = {
-		 .symbols = symbols,
-		 .size	  = ARRAY_SIZE(symbols) - 1, // Prevent extra iterations
-		 .count	  = 0,
+	struct symbols_s symbols[] = { CB_RESOLV_SYMBOLS{ NULL, 0, NULL } };
+	struct symbol_list sym_list = {
+		.symbols = symbols,
+		.size = ARRAY_SIZE(symbols) - 1, // Prevent extra iterations
+		.count = 0,
 	};
 
 	PRINT_VERSION_INFO;
@@ -162,7 +162,7 @@ static void __exit cbsensor_cleanup(void)
 	file_write_table_shutdown();
 	logger_shutdown();
 	ssleep(2); // @@TODO: we have to be sure we're not in a hook. need two
-		   // phase driver. very tricky
+		// phase driver. very tricky
 	CbDestroyNetworkIsolation();
 	cbBanningShutdown();
 	network_tracking_shutdown();

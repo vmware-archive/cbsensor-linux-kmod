@@ -37,7 +37,7 @@ void file_write_table_shutdown(void)
 bool is_file_tracked(struct file *file)
 {
 	struct file_write_entry *entry = NULL;
-	struct file_write_key	 key   = { .file = file };
+	struct file_write_key key = { .file = file };
 
 	if (!file) {
 		return false;
@@ -57,13 +57,13 @@ bool is_file_tracked(struct file *file)
 // Call When Brand New Entry
 bool insert_file_entry(struct file *file, pid_t tgid)
 {
-	bool			 path_built;
-	char *			 path_start = NULL;
-	struct file_write_entry *entry	    = NULL;
-	struct CB_EVENT *	 event	    = NULL;
-	int			 add_ret    = 0;
-	bool			 ret	    = false;
-	size_t			 offset;
+	bool path_built;
+	char *path_start = NULL;
+	struct file_write_entry *entry = NULL;
+	struct CB_EVENT *event = NULL;
+	int add_ret = 0;
+	bool ret = false;
+	size_t offset;
 
 	entry = hashtbl_alloc_generic(file_write_table, GFP_KERNEL);
 	if (!entry) {
@@ -93,9 +93,9 @@ bool insert_file_entry(struct file *file, pid_t tgid)
 	entry->last_tgid = tgid;
 	entry->state.isSpecialFile =
 		isSpecialFile(entry->path.buf, strlen(entry->path.buf));
-	entry->key.file		  = file;
-	entry->state.fileType	  = filetypeUnknown;
-	entry->state.didReadType  = false;
+	entry->key.file = file;
+	entry->state.fileType = filetypeUnknown;
+	entry->state.didReadType = false;
 	entry->state.try_vfs_read = true;
 	if (entry->state.isSpecialFile) {
 		entry->state.try_vfs_read = false;
@@ -134,8 +134,8 @@ out_free_entry:
 // Common for forked or execs reusing file descriptors.
 bool update_file_entry(struct file *file, pid_t tgid)
 {
-	bool		       found;
-	struct CB_EVENT *      event = NULL;
+	bool found;
+	struct CB_EVENT *event = NULL;
 	struct file_type_state state;
 
 	event = logger_alloc_event_notask(CB_EVENT_TYPE_FILE_WRITE, tgid,
@@ -162,17 +162,17 @@ bool update_file_entry(struct file *file, pid_t tgid)
 // Not a great place for determining which "task" this is
 bool remove_file_entry(struct file *file)
 {
-	struct CB_EVENT *	 event = NULL;
+	struct CB_EVENT *event = NULL;
 	struct file_write_entry *entry = NULL;
-	bool			 ret   = false;
-	struct file_write_key	 key   = { .file = file };
+	bool ret = false;
+	struct file_write_key key = { .file = file };
 
 	if (!should_log(CB_EVENT_TYPE_FILE_CLOSE)) {
 		entry = hashtbl_del_by_key_generic(file_write_table, &key);
 		if (entry) {
 			hashtbl_free_generic(file_write_table, entry);
 			entry = NULL;
-			ret   = true;
+			ret = true;
 		}
 		return ret;
 	}
@@ -207,11 +207,11 @@ bool remove_file_entry(struct file *file)
 bool set_file_entry_data(struct file *file, pid_t *last_tgid,
 			 struct file_type_state *state, const char *path)
 {
-	bool			 found;
-	struct hashtbl_bkt *	 bkt   = NULL;
-	unsigned long		 flags = 0;
+	bool found;
+	struct hashtbl_bkt *bkt = NULL;
+	unsigned long flags = 0;
 	struct file_write_entry *entry = NULL;
-	struct file_write_key	 key   = { .file = file };
+	struct file_write_key key = { .file = file };
 	if (!file || (!path && !state && !last_tgid)) {
 		return false;
 	}
@@ -243,11 +243,11 @@ bool get_file_entry_data(struct file *file, pid_t *last_tgid,
 			 struct file_type_state *state,
 			 struct file_write_path *path)
 {
-	bool			 found;
-	struct hashtbl_bkt *	 bkt   = NULL;
-	unsigned long		 flags = 0;
+	bool found;
+	struct hashtbl_bkt *bkt = NULL;
+	unsigned long flags = 0;
 	struct file_write_entry *entry = NULL;
-	struct file_write_key	 key   = { .file = file };
+	struct file_write_key key = { .file = file };
 
 	if (!file || (!state && !path && !last_tgid)) {
 		return false;
@@ -278,11 +278,11 @@ bool get_file_entry_data(struct file *file, pid_t *last_tgid,
 bool update_tgid_entry_data(struct file *file, pid_t last_tgid,
 			    struct file_type_state *state, char *path)
 {
-	bool			 found;
-	struct hashtbl_bkt *	 bkt   = NULL;
-	unsigned long		 flags = 0;
+	bool found;
+	struct hashtbl_bkt *bkt = NULL;
+	unsigned long flags = 0;
 	struct file_write_entry *entry = NULL;
-	struct file_write_key	 key   = { .file = file };
+	struct file_write_key key = { .file = file };
 
 	if (!file || !last_tgid || (!state && !path)) {
 		return false;
@@ -366,11 +366,11 @@ static char *getTypeStr(enum CB_FILE_TYPE type)
 	return str;
 }
 
-static int _show_file_tracking_table(struct HashTbl *	   hashTblp,
+static int _show_file_tracking_table(struct HashTbl *hashTblp,
 				     struct HashTableNode *nodep, void *priv)
 {
 	struct file_write_entry *entry = (struct file_write_entry *)nodep;
-	struct seq_file *	 m     = (struct seq_file *)priv;
+	struct seq_file *m = (struct seq_file *)priv;
 
 	seq_printf(m, "%40s | %#18llx | %6llu | %10s | %15s |\n",
 		   entry->path.buf, (uint64_t)entry->key.file,

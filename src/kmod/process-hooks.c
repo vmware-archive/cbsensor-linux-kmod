@@ -23,8 +23,8 @@ static bool _get_cmdline(struct task_struct *task, unsigned long start_addr,
 			 size_t cmdLineSize)
 {
 	unsigned int cmdLinePos = 0;
-	int	     i;
-	size_t	     len = 0;
+	int i;
+	size_t len = 0;
 
 	if (!task) {
 		return false;
@@ -69,7 +69,7 @@ static bool _get_cmdline(struct task_struct *task, unsigned long start_addr,
 struct dentry *get_dentry_from_mm(struct mm_struct *mm)
 {
 	struct vm_area_struct *vma;
-	struct dentry *	       dentryp = NULL;
+	struct dentry *dentryp = NULL;
 
 	if (!mm) {
 		goto dentry_mm_exit;
@@ -134,8 +134,8 @@ dentry_mm_exit:
 
 uint64_t get_ino_from_task(struct task_struct *task)
 {
-	uint64_t       ino     = 0;
-	struct inode * inodep  = NULL;
+	uint64_t ino = 0;
+	struct inode *inodep = NULL;
 	struct dentry *dentryp = NULL;
 
 	// TODO: We should be locking the task here, but I do not want to add it
@@ -159,7 +159,7 @@ uint64_t get_ino_from_task(struct task_struct *task)
 void cb_task_free(struct task_struct *p)
 {
 	struct CB_EVENT *event;
-	int		 ret;
+	int ret;
 
 	MODULE_GET();
 	if (!p) {
@@ -254,9 +254,9 @@ void _cb_post_clone(long id, long flags, long pid)
 {
 	struct CB_EVENT *event;
 	pid_t ppid = getpid(current); // This function is called in the context
-				      // of forking process
+		// of forking process
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-	uid_t uid  = current_cred()->uid.val;
+	uid_t uid = current_cred()->uid.val;
 	uid_t euid = current_cred()->euid.val;
 #else
 	uid_t uid = current_cred()->uid;
@@ -275,26 +275,26 @@ void _cb_post_clone(long id, long flags, long pid)
 	event = logger_alloc_event_atomic(CB_EVENT_TYPE_PROCESS_START, NULL);
 	if (event) {
 		struct ProcessTracking *procp;
-		int			ret;
+		int ret;
 
 		//
 		// Populate the event
 		//
-		event->procInfo.pid	   = pid;
+		event->procInfo.pid = pid;
 		event->processStart.parent = ppid;
 		event->processStart.uid =
 			process_tracking_should_track_user() ? uid : (uid_t)-1;
-		event->processStart.start_action   = CB_PROCESS_START_BY_FORK;
-		event->processStart.observed	   = true;
-		event->processStart.path[0]	   = 0;
+		event->processStart.start_action = CB_PROCESS_START_BY_FORK;
+		event->processStart.observed = true;
+		event->processStart.path[0] = 0;
 		event->processStart.path[PATH_MAX] = 0;
-		event->processStart.path_found	   = false;
+		event->processStart.path_found = false;
 
 		if (process_tracking_get_process(ppid, &procp)) {
 			strncpy(event->processStart.path, procp->path,
 				PATH_MAX);
 			event->processStart.path_found = procp->path_found;
-			event->processStart.inode      = procp->inode;
+			event->processStart.inode = procp->inode;
 		} else {
 			// If we failed to find the parent, look up the inode
 			event->processStart.inode = get_ino_from_task(current);
@@ -319,15 +319,15 @@ CATCH_DEFAULT:
 
 int cb_bprm_check_security(struct linux_binprm *bprm)
 {
-	int		    ret;
-	struct CB_EVENT *   event;
+	int ret;
+	struct CB_EVENT *event;
 	struct task_struct *task = current;
-	pid_t		    pid	 = getpid(task);
-	pid_t		    tid	 = gettid(task);
-	int		    stat;
-	struct inode *	    inode;
-	uint64_t	    ino	   = 0;
-	bool		    killit = false;
+	pid_t pid = getpid(task);
+	pid_t tid = gettid(task);
+	int stat;
+	struct inode *inode;
+	uint64_t ino = 0;
+	bool killit = false;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
 	uid_t uid = current_cred()->uid.val;
 #else
@@ -371,7 +371,7 @@ int cb_bprm_check_security(struct linux_binprm *bprm)
 				//
 				event->blockResponse.blockType =
 					BlockDuringProcessStartup;
-				event->blockResponse.uid   = uid;
+				event->blockResponse.uid = uid;
 				event->blockResponse.inode = ino;
 
 				// file_get_path() uses dpath which builds the
@@ -430,21 +430,21 @@ check_security_exit:
 //
 void cb_bprm_committed_creds(struct linux_binprm *bprm)
 {
-	struct CB_EVENT *   event;
+	struct CB_EVENT *event;
 	struct task_struct *task = current;
-	pid_t		    pid	 = getpid(task);
-	pid_t		    tid	 = gettid(task);
-	pid_t		    ppid = getppid(task);
+	pid_t pid = getpid(task);
+	pid_t tid = gettid(task);
+	pid_t ppid = getppid(task);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 0)
-	uid_t uid  = current_cred()->uid.val;
+	uid_t uid = current_cred()->uid.val;
 	uid_t euid = current_cred()->euid.val;
 #else
 	uid_t uid = current_cred()->uid;
 	uid_t euid = current_cred()->euid;
 #endif
-	struct inode *		inode;
-	uint64_t		ino = 0;
-	char *			pathname;
+	struct inode *inode;
+	uint64_t ino = 0;
+	char *pathname;
 	struct ProcessTracking *procp = NULL;
 	MODULE_GET();
 
@@ -479,10 +479,10 @@ void cb_bprm_committed_creds(struct linux_binprm *bprm)
 	event->processStart.parent = ppid;
 	event->processStart.uid =
 		process_tracking_should_track_user() ? uid : (uid_t)-1;
-	event->processStart.inode	 = ino;
+	event->processStart.inode = ino;
 	event->processStart.start_action = CB_PROCESS_START_BY_EXEC;
-	event->processStart.observed	 = true;
-	event->processStart.path_found	 = false;
+	event->processStart.observed = true;
+	event->processStart.path_found = false;
 
 	// file_get_path() uses dpath which builds the path efficiently
 	// by walking back to the root. It starts with a string terminator

@@ -21,10 +21,10 @@
 
 struct CB_ISOLATION_STATS g_cbIsolationStats;
 
-static enum CB_ISOLATION_MODE		 CBIsolationMode = IsolationModeOff;
+static enum CB_ISOLATION_MODE CBIsolationMode = IsolationModeOff;
 static struct CB_ISOLATION_MODE_CONTROL *pCurrentCbIsolationModeControl = NULL;
-uint64_t				 pControlLock;
-static volatile bool			 isInitialized = false;
+uint64_t pControlLock;
+static volatile bool isInitialized = false;
 
 int CbInitializeNetworkIsolation(void)
 {
@@ -63,7 +63,7 @@ void CbSetNetworkIsolationMode(enum CB_ISOLATION_MODE isolationMode)
 int CbProcessIsolationSetMode(void *pBuf, uint32_t InputBufLen)
 {
 	struct CB_ISOLATION_MODE_CONTROL *tmpIsolationModeControl;
-	uint32_t			  ExpectedBufLen;
+	uint32_t ExpectedBufLen;
 
 	if (!isInitialized) {
 		return -1;
@@ -111,9 +111,9 @@ int CbProcessIsolationSetMode(void *pBuf, uint32_t InputBufLen)
 	if (pCurrentCbIsolationModeControl->isolationMode == IsolationModeOff) {
 		PRINTK(KERN_INFO, "isolation OFF");
 	} else {
-		char	       str[INET_ADDRSTRLEN];
+		char str[INET_ADDRSTRLEN];
 		unsigned char *addr;
-		int	       i;
+		int i;
 		for (i = 0;
 		     i <
 		     pCurrentCbIsolationModeControl->numberOfAllowedIpAddresses;
