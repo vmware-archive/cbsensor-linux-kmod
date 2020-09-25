@@ -40,3 +40,18 @@ cd build
 cmake ..
 make
 ```
+
+## For Carbon Black internal builds
+
+To build, just run `make`
+
+This will pull and launch a docker image in which the build will take place.
+The docker container will remain running after the build. This allows subsequent
+builds to be done incrementally (and quickly)
+
+`make clean` will halt the docker container and delete the build directory,
+allowing for a clean build.
+
+NOTE: This local build technique only builds against a single kernel version.
+You can change the kernel to build against by changing the KERNEL_PACKAGE
+reference in the Makefile
