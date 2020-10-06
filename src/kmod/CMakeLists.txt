@@ -30,7 +30,7 @@ set(SYMBOLS_INSTALL_COMMAND objcopy --only-keep-debug ${DRIVER_FILE} ${DRIVER_FI
 
 # Generate the Kbuild file through cmake.
 FILE(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/Kbuild "obj-m := cbsensor.o
-ccflags-y :=  -Wall -Wformat
+ccflags-y :=  -g -DDEBUG -Wall -Wformat
 cbsensor-objs := drvmain.o \
                  file-helper.o \
                  file-hooks.o \
