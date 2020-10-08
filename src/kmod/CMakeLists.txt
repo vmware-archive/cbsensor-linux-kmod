@@ -32,8 +32,9 @@ set(SYMBOLS_INSTALL_COMMAND objcopy --only-keep-debug ${DRIVER_FILE} ${DRIVER_FI
 FILE(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/Kbuild "obj-m := cbsensor.o
 ccflags-y := -Wall -Wformat
 if (CMAKE_BUILD_TYPE STREQUAL Debug)
-    ccflags-y += -g
+ccflags-y += -g
 endif()
+
 cbsensor-objs := drvmain.o \
                  file-helper.o \
                  file-hooks.o \
