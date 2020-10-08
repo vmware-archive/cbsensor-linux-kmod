@@ -28,12 +28,14 @@ set(KBUILD_CMD $(MAKE) --no-print-directory -C ${KERNELDIR} M=${CMAKE_CURRENT_BI
 
 set(SYMBOLS_INSTALL_COMMAND objcopy --only-keep-debug ${DRIVER_FILE} ${DRIVER_FILE}.debug && ${CMAKE_STRIP} --strip-unneeded ${DRIVER_FILE})
 
+FLAGS:= -Wall -Wformat
+if (CMAKE_BUILD_TYPE STREQUAL Debug)
+    FLAGS += -g
+endif()
+
 # Generate the Kbuild file through cmake.
 FILE(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/Kbuild "obj-m := cbsensor.o
-ccflags-y := -Wall -Wformat
-if (CMAKE_BUILD_TYPE STREQUAL Debug)
-ccflags-y += -g
-endif()
+ccflags-y := ${FLAGS}
 
 cbsensor-objs := drvmain.o \
                  file-helper.o \
