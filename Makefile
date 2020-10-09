@@ -32,7 +32,7 @@ build: container
 		&& sed '/build_requires/a $(KERNEL_PACKAGE)' ../conanfile.txt > conanfile.txt \
 		&& conan install . -j kernel-headers.json \
 		&& cmake -DKERNELDIR=`jq -r .installed[0].packages[0].cpp_info.rootpath < kernel-headers.json`/kernel .. \
-		&& make \
+		&& make VERBOSE=1 \
 		"
 
 clean:
