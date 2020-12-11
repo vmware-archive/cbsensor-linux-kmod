@@ -33,12 +33,6 @@
 	printk_ratelimited(level "cbsensor: %s:%d: " fmt, __SHORT_FILENAME__, \
 			   __LINE__, ##__VA_ARGS__)
 
-/**
- * Unfortunately, we can't use dynamic debugging with pr_debug. It's a GPL
- * feature. So we'll create a poor substitute. Choosing to use KERN_INFO level
- * instead of KERN_DEBUG so we don't have to enable debugging kernel-wide to get
- * these messages.
- */
 extern uint32_t g_debug_subsystem;
 
 void test_logging(void);
@@ -51,10 +45,10 @@ void test_logging(void);
 
 #define PR_DEBUG(fmt, ...)                                            \
 	if (DS_ENABLED(DS_MYSUBSYS))                                  \
-	printk(KERN_INFO "cbsensor: %s:%d: " fmt, __SHORT_FILENAME__, \
+	pr_info("cbsensor: %s:%d: " fmt, __SHORT_FILENAME__,          \
 	       __LINE__, ##__VA_ARGS__)
 
 #define PR_DEBUG_RATELIMITED(fmt, ...)                        \
 	if (DS_ENABLED(DS_MYSUBSYS))                          \
-	printk_ratelimited(KERN_INFO "cbsensor: %s:%d: " fmt, \
+	pr_info_ratelimited("cbsensor: %s:%d: " fmt,          \
 			   __SHORT_FILENAME__, __LINE__, ##__VA_ARGS__)
